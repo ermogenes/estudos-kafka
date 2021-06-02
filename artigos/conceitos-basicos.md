@@ -11,7 +11,7 @@ Pode ser instalado no Windows ou Mac, mas preferencialmente em Linux. Consiste e
 - **Apache Kafka** faz toda a mágica acontecer.
 - **Zookeeper** faz a gestão e coordenação das instâncias.
 
-# _Brokers_ e _clusters_
+### _Brokers_ e _clusters_
 
 Cada instância de servidor Kafka é chamada de _broker_. É responsável por todas as ações de persistência e leitura.
 
@@ -25,17 +25,15 @@ A coordenação é feita automaticamente pelo Zookeeper. Um dos _brokers_ será 
 
 Além de gerenciar os _brokers_ em um _cluster_ e coordenar a liderança de partição, o Zookeeper também notifica os _brokers_ sobre mudanças na estrutura, mantendo os metadados atualizados em todos os servidores. Com tantas atribuições, o Zookeeper é obrigatório, mesmo que haja somente um _broker_.
 
-O próprio Zookeper deve ser preferencialmente mantido em um _cluster_, sempre com número ímpar de servidores. Eles elegem um líder, que trata as entradas (`write`), com os demais seguidores efetuando as saídas (`read`).
+O próprio Zookeper deve ser preferencialmente mantido em um _cluster_, sempre com número ímpar de servidores. Eles elegem um líder, que trata as entradas (_write_), com os demais seguidores efetuando as saídas (_read_).
 
 O Zookeeper é transparente aos consumidores e produtores, e acessado somente pelo Kafka.
 
----
-_daqui em diante, o texto está em rascunho..._
----
-
 ## Modelo de armazenamento
 
-Tópicos
+_em breve..._
+
+<!-- Tópicos
 	Um fluxo de dados, chamados mensagens
 	Como uma tabela, sem constraints
 	Pode criar quantos quiser
@@ -58,11 +56,13 @@ Criação das partições de tópicos nos brokers
 			b1{t1.p0, t2.p1}, b2{t1.p2, t2.p0}, b3{t1.p1}
 	Com replicação, a réplica sempre vai para outro broker
 		Ex. b1, b2 e b3; t1 com p0 e p1, rf=2
-			b1{t1.p0l}, b2{t1.p0r, t1.p1l}, b3{t1.p1r}
+			b1{t1.p0l}, b2{t1.p0r, t1.p1l}, b3{t1.p1r} -->
 
 ## Integração
 
-Produtores
+_em breve..._
+
+<!-- Produtores
 	Escrever mensagens nos tópicos
 	Não é necessário saber qual o broker e qual a partição
 	Não é necessário saber se o broker está online
@@ -97,4 +97,4 @@ Offsets
 		at least once (preferido):
 			após processar (caso der erro, recebe duas vezes -- deve ser idempotente)
 		exactly once:
-			uma vez, garantido, mas somente interno do Kafka
+			uma vez, garantido, mas somente interno do Kafka -->
