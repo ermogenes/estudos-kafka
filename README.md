@@ -6,6 +6,7 @@ Coletânea de materiais de estudo sobre Apache Kafka.
 
 ## Materiais autorais
 
+- [Conceitos básicos](artigos/conceitos-basicos.md)
 - [Kafka com podman no Windows](artigos/kafka-com-podman-no-windows.md)
 - [Dicas de Kafka no Windows com WSL2](artigos/dicas-de-kafka-no-windows-com-wsl2.md)
 - [Apache Kafka - CLI - Hands-on](artigos/apache-kafka-cli-hands-on.md)
