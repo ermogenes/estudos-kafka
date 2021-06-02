@@ -2,11 +2,6 @@
 
 Coletânea de materiais de estudo sobre Apache Kafka.
 
-![GitHub last commit (branch)](https://img.shields.io/github/last-commit/ermogenes/estudos-kafka/master?label=%C3%BAltima%20atualiza%C3%A7%C3%A3o)
-![Github commit count](https://badgen.net/github/commits/ermogenes/estudos-kafka)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ermogenes/estudos-kafka?label=commits)
-![GitHub repo size](https://img.shields.io/github/repo-size/ermogenes/estudos-kafka?label=tamanho)
-
 ---
 
 ## Materiais autorais
