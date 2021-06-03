@@ -19,7 +19,7 @@ Coletânea de materiais de estudo sobre Apache Kafka.
   - [Produtor simples, assíncrono, usando chaves](https://github.com/ermogenes/kafka-producer-java-hello-world-async-with-keys)
   - [Produtor simples, síncrono (forçado), usando chaves](https://github.com/ermogenes/kafka-producer-java-hello-world-forced-sync-with-keys)
   - [Consumidor simples](https://github.com/ermogenes/kafka-consumer-java-hello-world)
-
+  - [Consumidor - Assign and Seek](https://github.com/ermogenes/kafka-consumer-java-hello-world-assign-seek)
 ---
 
 Prof. Ermogenes Palacio, 2021-.
