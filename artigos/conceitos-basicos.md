@@ -162,9 +162,9 @@ Em resumo, podemos criar um produtor seguro usando `enable.idempotence=true` ass
 
 ##### Desempenho
 
-Algo que melhoria substancialmente o desempenho, contraintuitivamente, é a uso de compactação na produção de mensagens, usando a configuração `compression.type`. [Escolha um dos algoritmos de compactação](https://blog.cloudflare.com/squeezing-the-firehose/), por exemplo `lz4`, `snappy` ou `zstd` e os lotes de mensagens serão compactados, reduzindo a latência, o tráfego e o espaço de armazenamento. Podemos controlar a formação dos lotes usando `linger.ms` (intervalo a aguardar antes de enviar, permitindo assim a formação de lotes maiores -- o padrão é `0`) e `batch.size` (tamanho máximo em bytes de um lote -- o padrão é 16 KB).
+Algo que melhoria substancialmente o desempenho, contraintuitivamente, é a uso de compactação na produção de mensagens, usando a configuração `compression.type`. [Escolha um dos algoritmos de compactação](https://blog.cloudflare.com/squeezing-the-firehose/), por exemplo `lz4`, `snappy` ou `zstd` e os lotes de mensagens serão compactados, reduzindo a latência, o tráfego e o espaço de armazenamento. Podemos controlar a formação dos lotes usando `linger.ms` (intervalo a aguardar antes de enviar, permitindo assim a formação de lotes maiores -- o padrão é `0`) e `batch.size` (tamanho máximo em bytes de um lote -- o padrão é 16KB).
 
-Uma boa configuração para começar a testar é `compression.type=snappy`, `linger.ms=20` e `batch.size=32768` (32 * 1024 bytes = 32 KB).
+Uma boa configuração para começar a testar é `compression.type=snappy`, `linger.ms=20` e `batch.size=32768` (32 * 1024 bytes = 32KB).
 
 #### Consumo
 
@@ -184,11 +184,37 @@ Ilustrando casos válidos:
 
 Os _offsets_ atuais de cada consumidor indicam o ponto atual de leitura de um consumidor em um tópico, por partição, e permitem continuar do mesmo ponto ao retomar o consumo. Ficam armazenados no tópico `__consumer_offsets` e são mantidos automaticamente. Na entrega o consumidor terá o seu registro de _offsets_ atual alterado pelo Kafka, de forma que ele não o receberá em duplicidade, de acordo com a semântica de entrega estabelecida.
 
-O consumidor pode selecionar uma entre três semânticas de entrega:
+O consumidor pode utilizar uma entre três semânticas de entrega:
 
-- `at most once`, onde o _offset_ é ajustado ao realizar a leitura, e em caso de erro na transmissão a mensagem não será mais lida;
-- `at least once`: onde o _offset_ é ajustado somente ao final do processo, e em caso de erro na alteração do _offset_ a mensagem será enviada novamente. É o método preferido, porém deve-se garantir a idempotência no lado do consumidor;
-- `exactly once`: onde é garantida a entrega uma e somente uma vez, porém é restrita a processos internos do Kafka .
+- `at most once`: mensagens podem ser perdidas, mas nunca são reenviadas em duplicidade. O _offset_ é ajustado ao realizar a leitura, e em caso de erro no processamento das mensagens pelo consumidor, ao reiniciar as mensagem não serão reentregues, pois a confirmação já foi dada.
+- `at least once`: mensagens nunca são perdidas, mas podem ser reenviadas em duplicidade. O _offset_ é ajustado somente ao final do processo, e em caso de erro na alteração do _offset_ ou erro no processamento pelo consumidor, a entrega pode reiniciar de onde começou na última vez, potencialmente repetindo dados já processados. Para implementar isso, faça o _commit_ de _offset_ manualmente, e garanta a idempotência do procedimento. É o método preferido.
+- `exactly once`: onde é garantida a entrega uma e somente uma vez, porém é restrita a processos internos do Kafka.
+
+💡 Podemos implementar idempotência definindo chaves únicas para cada registro recebido ao consumir. Caso o dado não possua uma chave única intrínseca, uma maneira bem simples é utilizar uma chave no mecanismo de persistência que combine o nome do tópico, a partição e o _offset_, combinação essa única em uma instalação Kafka.
+
+O modelo de consumo é o _poll_ (e não _push_). Assim, em intervalos de tempo o consumidor requisita novos registros, em vez de ser estimulado pelo Kafka. Isso permite maior controle pelos consumidores da frequência e do volume desejados para receber os dados.
+
+🐱‍👤 Podemos especificar o tamanho mínimo em bytes de um pacote a ser recebido usando `fetch.min.bytes` (o padrão é `1`), criando lotes de transmissão e reduzindo o tráfego ao custo da latência (o máximo é controlado por `fetch.max.bytes` com o padrão de 50MB). Podemos também controlar o tamanho máximo do lote de registros usando `max.poll.records` (o padrão é `500`), aumentando a quantidade em caso de mensagens pequenas ou de alta quantidade de RAM disponível. O tamanho máximo em bytes por partição pode ser controlado por `max.partitions.fetch.bytes` (o padrão é 1MB). Só altere essas configurações em casos extremos de problemas de desempenho.
+
+##### Retenção e repetição
+
+Espera-se que um consumidor (ou grupo de consumidores) faça leituras contínuas. Em caso de falha ou inatividade por um período prolongado (maior do que o período de retenção) seu _offset_ se tornará inválido ou descartado.
+
+Nesses casos, há três opções para o consumidor:
+
+- com `auto.offset.reset=latest` serão lidos somente os novos dados, a partir da retomada do consumo.
+- com `auto.offset.reset=earliest` serão lidos todos os dados disponíveis novamente, desde o início.
+- com `auto.offset.reset=none` será gerada uma exceção caso não haja nenhum _offset_.
+
+Pode-se ajustar o tempo de retenção por _broker_ usando `offset.retention.minutes` (o padrão é uma semana).
+
+Para repetir o consumo de um tópico (receber novamente os dados a partir de um _offset_) em um grupo de consumidores, use `kafka-consumers-groups` com a opção `--reset-offsets --execute --to-earliest` e reinicie os consumidores. Atente ao fato de que eles devem ser idempotentes.
+
+Além do _thread_ de _poll_ os consumidores em um grupo possuem um _thread_ de _heartbeat_ com o _broker_ coordenador do grupo. Ele serve para indicar que o consumidor ainda está ativo. Como os _threads_ são independentes, a realização de _polls_ muito espaçados pode gerar problemas.
+
+- `session.timeout.ms` (padrão 10s) indica o tempo máximo de espera entre _heartbeats_ antes que o consumidor seja considerado morto. Diminuir esse valor causará rebalanceamentos mais frequentes.
+- `heartbeat.interval.ms` (padrão 3s) indica o tempo de espera entre envios de _heartbeats_ pelo consumidor. É recomendado 1/3 do `timeout`.
+- `max.poll.interval.ms` (padrão 5min) indica o máximo tempo decorrido entre dois _polls_ antes de declarar o consumidor morto. Esse tempo deve ser ajustado caso o tempo de processamento seja muito alto e não possa ser reduzido.
 
 #### Chaves em mensagens
 
@@ -198,7 +224,7 @@ Um caso de uso comum seria o recebimento de posições GPS de diversos veículos
 
 As chaves, assim como os dados, são armazenados e transportados em forma binária em _arrays_ de _bytes_, e podem ser serializados e desserializados pelos clientes conforme a necessidade.
 
-🤯 A seleção da partição é feita através do cálculo do resto da divisão de um inteiro calculado através do [hash não criptográfico MurMur2](https://en.wikipedia.org/wiki/MurmurHash) do valor da chave pelo número de partições disponíveis. Isso claramente distribui as entradas de forma dependente da quantidade de partições, de forma que a alteração nessa quantidade gera uma distribuição diferente nas próximas gravações.
+🤯 A seleção da partição é feita através do cálculo do resto da divisão de um inteiro calculado através do [hash não criptográfico Murmur2](https://en.wikipedia.org/wiki/MurmurHash) do valor da chave pelo número de partições disponíveis. Isso claramente distribui as entradas de forma dependente da quantidade de partições, de forma que a alteração nessa quantidade gera uma distribuição diferente nas próximas gravações.
 
 #### Grupos de consumidores
 
@@ -209,4 +235,3 @@ Um grupo de consumidores é definido por um nome, e representa geralmente um _cl
 Em um grupo, uma partição sempre será lida pelo mesmo consumidor, garantindo a ordenação. Essa coordenação é feita automaticamente pelo Kafka.
 
 Caso hajam mais consumidores do que partições, eles ficarão inativos. Ainda assim podem ser úteis, pois serão acionados assim que um dos consumidores fique indisponível.
- 
