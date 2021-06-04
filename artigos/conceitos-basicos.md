@@ -200,7 +200,7 @@ As chaves, assim como os dados, são armazenados e transportados em forma binár
 
 🤯 A seleção da partição é feita através do cálculo do resto da divisão de um inteiro calculado através do [hash não criptográfico MurMur2](https://en.wikipedia.org/wiki/MurmurHash) do valor da chave pelo número de partições disponíveis. Isso claramente distribui as entradas de forma dependente da quantidade de partições, de forma que a alteração nessa quantidade gera uma distribuição diferente nas próximas gravações.
 
-#### Grupos de consumidores/
+#### Grupos de consumidores
 
 Para conseguirmos paralelizar o consumo sem repetir a leitura de um dado entre as instâncias consumidoras, precisamos criar uma afinidade entre elas. Fazemos isso criando grupos de consumidores, que nada mais são do que indicadores de que eles compartilham o mesmo _offset_ em cada partição.
 
