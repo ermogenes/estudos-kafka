@@ -16,6 +16,7 @@ Coletânea de materiais de estudo sobre Apache Kafka.
 - Java
   - [Produtor simples](https://github.com/ermogenes/kafka-producer-java-hello-world)
   - [Produtor idempotente](https://github.com/ermogenes/kafka-producer-java-hello-world-idempotent)
+  - [Produtor de alto desempenho](https://github.com/ermogenes/kafka-producer-java-hello-world-high-throughput)
   - [Produtor simples, assíncrono](https://github.com/ermogenes/kafka-producer-java-hello-world-async)
   - [Produtor simples, assíncrono, usando chaves](https://github.com/ermogenes/kafka-producer-java-hello-world-async-with-keys)
   - [Produtor simples, síncrono (forçado), usando chaves](https://github.com/ermogenes/kafka-producer-java-hello-world-forced-sync-with-keys)

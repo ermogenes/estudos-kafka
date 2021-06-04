@@ -160,6 +160,12 @@ A solução mais simples para habilitar as retentativas e garantir a ordenação
 
 Em resumo, podemos criar um produtor seguro usando `enable.idempotence=true` associado a `min.insync.replicas=2` no tópico ou no _broker_.
 
+##### Desempenho
+
+Algo que melhoria substancialmente o desempenho, contraintuitivamente, é a uso de compactação na produção de mensagens, usando a configuração `compression.type`. [Escolha um dos algoritmos de compactação](https://blog.cloudflare.com/squeezing-the-firehose/), por exemplo `lz4`, `snappy` ou `zstd` e os lotes de mensagens serão compactados, reduzindo a latência, o tráfego e o espaço de armazenamento. Podemos controlar a formação dos lotes usando `linger.ms` (intervalo a aguardar antes de enviar, permitindo assim a formação de lotes maiores -- o padrão é `0`) e `batch.size` (tamanho máximo em bytes de um lote -- o padrão é 16 KB).
+
+Uma boa configuração para começar a testar é `compression.type=snappy`, `linger.ms=20` e `batch.size=32768` (32 * 1024 bytes = 32 KB).
+
 #### Consumo
 
 Consumidores lêem dados de tópicos. Não é necessário saber qual a partição ou qual _broker_ acessar, mas somente o endereço de um dos _brokers_ do _cluster_ e o nome do tópico. Toda a resolução é feita pelo Kafka, garantindo a estabilidade durante as indisponibilidades.
