@@ -120,8 +120,10 @@ Os dados são empacotados em registros ou mensagens contendo um cabeçalho, uma 
 O produtor pode solicitar três tipos de confirmação de recebimento após envio:
 
 - `acks=0` não aguarda confirmação. É mais rápido, mas não garante a entrega.
-- `acks=1` aguarda confirmação do líder, com possível perda em caso de falha.
-- `acks=all` aguarda o líder e todas as demais réplicas, portanto não há perdas, ao custo de performance.
+- `acks=1` aguarda confirmação do líder, com possível perda de dados em caso de falha no líder entre a confirmação e a replicação.
+- `acks=all` aguarda o líder e a replicação, portanto não há perdas, ao custo de latência.
+
+🍌 A confirmação `acks=all` ainda assim pode tolerar alguma indisponibilidade nas réplicas. Isso pode ser ajustado pela combinação do fator de replicação do tópico com a configuração `min.insync.replicas` (quantidade mínima de _brokers_ - incluíndo o líder - que devem responder positivamente antes da confirmação) no _broker_ ou no tópico. Por exemplo, com fator de replicação 5 e mínimo _in sync_ de 3, a confirmação virá mesmo com dois _brokers_ fora, apesar do `acks=all`.
 
 O Kafka decide em qual partição o dado será gravado. A quantidade de mensagens já gravadas não influencia na decisão, portanto não há divisão igualitária de espaço ocupado ou de quantidade de dados armazenados.
 
@@ -142,6 +144,21 @@ Foram enviados os dados 🍌, 🥑, 🍉, 🍓 e 🍇 ao tópico `frutas` que po
 Perceba que garantimos que 🍓 chegou ao tópico após 🍉, e que 🍌 chegou antes de 🍇, mas nada podemos falar sobre a relação temporal entre 🍉 e 🥑.
 
 Qualquer outra sequência seria válida, desde que os _offsets_ na mesma partição garantam a sequência interna.
+
+##### Retentativas e produtores idempotentes
+
+Em caso de exceções no envio, o erro pode ser tratado pelo desenvolvedor, ou automaticamente pelo produtor.
+
+Os produtores podem usar a configuração `retries` para fazer a retentativa automática, e esse é inclusive o comportamento padrão do Kafka nas versões >= 2.1. As configurações importantes em relação a retentativas automáticas são:
+
+- `retries` indica quantas tentativas serão feitas em caso de exceção (`0` = nenhuma);
+- `retry.backoff.ms` indica o tempo entre as retentativas;
+- `delivery.timeout.ms` indica o limite de tempo para retentativas (padrão é 2 minutos);
+- `max.in.flight.requests.per.connection` indica o número máximo de requisições em paralelo provenientes de uma mesma conexão. Caso seja maior do que um (padrão é `5`), pode gerar gravações fora de ordem em uma retentativa. O valor `1` garante o sequenciamento dentro da mesma conexão, mas bloqueia o paralelismo.
+
+A solução mais simples para habilitar as retentativas e garantir a ordenação dentro da conexão é usar produtores idempotentes. Isso é feito ativando a configuração do produtor `enable.idempotence=true`. Isso exige `acks=all`, `max.in.flight.requests.per.connection=5` e `retries=Integer.MAX_VALUE` (ou seja, ou valores padrão). Há uma explicação detalhada do algoritmo usado [aqui](https://issues.apache.org/jira/browse/KAFKA-5494).
+
+Em resumo, podemos criar um produtor seguro usando `enable.idempotence=true` associado a `min.insync.replicas=2` no tópico ou no _broker_.
 
 #### Consumo
 
