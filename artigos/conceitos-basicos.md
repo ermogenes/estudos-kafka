@@ -35,6 +35,15 @@ O próprio ZooKeeper deve ser preferencialmente mantido em um _cluster_, sempre 
 
 O ZooKeeper é transparente aos consumidores e produtores, e acessado somente pelo Kafka.
 
+#### Dimensionamento
+
+Algumas dicas de boas práticas coletadas pela web apontam:
+
+- Não ter mais do que algo entre 2.000 e 4.000 partições (independente dos tópicos) por _broker_;
+- Não ter mais do que 20.000 partições no geral do _cluster_;
+- Usar fator de replicação entre 2 e 4, com 3 sendo o mais recomendado;
+- Equilibrar o número de partições de acordo com o número de _brokers_ disponíveis, algo entre 2x para um número pequeno de brokers (< 6), ou 1x para um grande número de _brokers_ (> 12). Lembre que esse número deve ser **imutável** para garantir a ordenação por chaves. É melhor grande do que pequeno, mas é necessário avaliar o desempenho.
+
 ## Modelo de armazenamento
 
 Podemos pensar no Kafka como um grande _log_, onde dados em fluxo são armazenados em uma sequência temporal imutável, para serem consumidos ordenadamente. Dados de mesma natureza são agrupados em _tópicos_, e os tópicos são gravados em arquivos físicos distribuídos entre os _brokers_ chamados _partições_.
@@ -48,6 +57,8 @@ Os tópicos são agrupamentos de dados de mesma categoria. Atuam como tabelas em
 Ao criar um tópico definimos um nome identificador, a quantidade de partições desejadas, e a quantidade de réplicas que estarão disponíveis.
 
 Ao se produzir uma mensagem (ou seja, gravar um mensagem em um tópico) o Kafka verifica se o tópico existe (cria com a configuração padrão se não existir), lê os seus metadados com as partições e configurações de replicação, e efetua a gravação. Após a gravação, a mensagem estará disponível para todos os consumidores interessados no tópico.
+
+🐱‍👤 [Discussão sobre padrões de nomenclatura de tópicos](https://cnr.sh/essays/how-paint-bike-shed-kafka-topic-naming-conventions).
 
 ### Partições
 
@@ -104,6 +115,80 @@ Em um tópico criado com o fator de replicação padrão `1`, cada partição co
 O fator de replicação, portanto, é definido entre 1 e a quantidade de _brokers_ existentes no _cluster_.
 
 Sempre haverá uma partição líder eleita entre as réplicas, que atenderá toda a carga. As demais se manterão como cópias estáticas sincronizadas, podendo assumir a liderança eventualmente a critério do Kafka.
+
+🐱‍👤 Em caso de falha em todas as réplicas, o Kafka aguardará uma delas estar novamente online para elegê-la como líder. Por padrão deve ser necessariamente uma réplica sincronizada (ISR). Pode-se mudar `unclean.leader.election=true` para permitir que seja uma réplica desatualizada. Isso melhora a disponibilidade ao preço de possíveis perdas de algumas entradas. Bom para logs ou coleta de métricas, onde algumas leituras podem ser perdidas em troca de um retorno mais rápido.
+
+### Segmentação e retenção
+
+Os dados físicos uma partição são armazenados em arquivo de dados `.log`, chamados de segmentos. Os dados são indexados para facilitar a sua recuperação (em tempo constante!) nos arquivos `.index`, e para agilizar o acesso por data de criação, nos arquivos `.timestamp`.
+
+Os segmentos são criados sequencialmente, de acordo com aas configurações:
+
+- `log.segment.bytes` (padrão. 1GB) indica o tamanho máximo de um segmento.
+- `log.segment.ms` (padrão 1 semana) indica o tempo a se aguardar até criar-se um novo segmento.
+
+A escolha da política de segmentação deve observar a frequência desejada para a criação de novos segmentos, observando a quantidade de arquivos a se manterem abertos (quanto à memória e limites do SO) e a frequência de gatilhos de limpeza de log. Uma vez por dia pode ser um valor inicial aceitável.
+
+Os dados são indexados para facilitar a sua recuperação (em tempo constante!) nos arquivos `.index`, e para agilizar o acesso por data de criação, nos arquivos `.timestamp`.
+
+Após cada segmentação (ou seja, quando o segmento deixa de ser ao segmento ativo) é realizado o processo de limpeza (ou compactação) de log. Nele são eliminados registros antigos, de forma a manter o custo de armazenamento do Kafka controlado. O processo de limpeza será iniciado a cada `log.cleaner.backoff.ms` (padrão 15s), e utilizará uma das duas políticas disponíveis:
+
+Em `log.cleanup.policy=delete` (comportamento padrão), o log será compactado e os registros eliminados de acordo com um prazo de expiração ou do tamanho do segmento:
+
+- `log.retention.hours` (padrão 1 semana) indica o tempo de retenção. Todo dado mais velho do que esse tempo está sujeito a ser eliminado na compactação.
+- `log.retention.bytes` (padrão `-1` = infinito) indica o tamanho máximo de um segmento antes de estar sujeito a compactação.
+
+Em `log.cleanup.policy=compact` temos a retenção infinita dos registros, baseado na sua chave. Ao compactar mantêm-se somente os registros mais recentes para cada chave, de forma que os consumidores ainda terão o dado mais atualizado, apesar de não ter mais acesso ao histórico.
+
+Por exemplo, se produzirmos em um tópico `salario`:
+
+```
+funcionario_1 => 2000
+funcionario_3 => 2100
+funcionario_4 => 4000
+funcionario_2 => 3500
+funcionario_1 => 2200
+funcionario_3 => 2000
+--- aqui foi realizada a última compactação
+funcionario_1 => 2500
+funcionario_3 => 2200
+funcionario_1 => 2505
+```
+
+A compactação processará os registros conforme a descrição na lateral:
+
+```
+funcionario_1 => 2000 # esse registro será excluído, pois há mais recente para essa chave
+funcionario_3 => 2100 # esse registro será excluído, pois há mais recente para essa chave
+funcionario_4 => 4000 # esse registro será mantido, pois é o mais recente dessa chave
+funcionario_2 => 3500 # esse registro será mantido, pois é o mais recente dessa chave
+funcionario_1 => 2200 # esse registro será excluído, pois há mais recente para essa chave
+funcionario_3 => 2000 # esse registro será excluído, pois há mais recente para essa chave
+--- aqui foi realizada a última compactação
+funcionario_1 => 2500
+funcionario_3 => 2200
+funcionario_1 => 2505
+```
+
+Para um consumidor que esteja sempre online, nada será perceptível. Para um que inicie uma leitura do início nesse ponto, ele receberá:
+
+```
+funcionario_4 => 4000
+funcionario_2 => 3500
+funcionario_1 => 2500
+funcionario_3 => 2200
+funcionario_1 => 2505
+```
+
+Perceba que ele ainda pode receber mais de um registro por chave, já que as linhas mais recentes ainda não foram compactadas pois estão no segmento ativo, mas ele tem garantido o registro mais recente de cada chave.
+
+Esta configuração está sujeita às seguintes configurações:
+
+- `segment.ms` (padrão 7d) tempo a aguardar antes de fechar um segmento;
+- `segment.bytes` (padrão 1GB) tamanho máximo do segmento;
+- `min.compaction.lag.ms` (padrão 0) tempo aguardado antes que uma mensagem possa ser compactada;
+- `delete.retention.ms` (padrão 24h) espera entre marcação para deleção e deleção real;
+- `min.cleanable.dirty.ratio` (padrão 0.5) eficiência da compactação entre esforço e qualidade (mais baixo ocorre mais vezes).
 
 ### Dados, produtores e consumidores
 
@@ -235,3 +320,16 @@ Um grupo de consumidores é definido por um nome, e representa geralmente um _cl
 Em um grupo, uma partição sempre será lida pelo mesmo consumidor, garantindo a ordenação. Essa coordenação é feita automaticamente pelo Kafka.
 
 Caso hajam mais consumidores do que partições, eles ficarão inativos. Ainda assim podem ser úteis, pois serão acionados assim que um dos consumidores fique indisponível.
+
+<!-- ## Ecossistema
+
+Kafka Connect API
+  - Source Connectors
+  - Sink Connectors
+Kafka Streams API
+Kafka Schema Registry
+  - Apache Avro
+
+Debezium - CDC
+
+https://medium.com/@stephane.maarek/the-kafka-api-battle-producer-vs-consumer-vs-kafka-connect-vs-kafka-streams-vs-ksql-ef584274c1e -->
