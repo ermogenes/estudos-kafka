@@ -64,4 +64,5 @@ docker-compose exec broker kafka-topics --list --bootstrap-server localhost:9092
 
 ## Alternativas
 
-Uma alternativa é utilizar um dos [_compose files_ da Conduktor](https://github.com/conduktor/kafka-stack-docker-compose).
+- [_Compose files_ da Conduktor](https://github.com/conduktor/kafka-stack-docker-compose);
+- [Imagem `fast-data-dev` da Landoop](https://hub.docker.com/r/landoop/fast-data-dev).
