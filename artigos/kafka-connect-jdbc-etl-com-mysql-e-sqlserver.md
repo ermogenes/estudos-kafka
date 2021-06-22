@@ -1,4 +1,4 @@
-# Kafka Connect JDBC - ETL com MySQL e SQLServer
+# Kafka Connect JDBC - ETL com MySQL e SQL Server
 
 Faremos uma prova de conceito _hands-on_ de integração de bases de dados usando:
 
@@ -95,7 +95,7 @@ Se for necessário inspecionar algum serviço, recupere o _id_ do _container_ us
 docker exec -it <id-do-container> bash
 ```
 
-Acesse a interface de gerenciamento em `http://127.0.0.1:3030`. Ela permite visualizar o estado do cluster. Quando estiver totalmente carregada (pode demorar alguns minutos) você algo como:
+Acesse a interface de gerenciamento em [http://127.0.0.1:3030](http://127.0.0.1:3030). Ela permite visualizar o estado do cluster. Quando estiver totalmente carregada (pode demorar alguns minutos) você algo como:
 
 ![](kafka-connect-jdbc-etl-com-mysql-e-sqlserver/kafka-ui-home.png)
 
