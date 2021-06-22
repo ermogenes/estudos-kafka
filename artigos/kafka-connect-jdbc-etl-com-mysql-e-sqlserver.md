@@ -87,7 +87,7 @@ kafka-cluster_1  | You may visit http://127.0.0.1:3030 in about a minute.
 ...
 ```
 
-Durante alguns minutos tudo será iniciado. O terminal ficará aberto, exibindo os logs integrados dos três serviços. Mantenha este terminal aberto. Finalizá-lo (por exemplo, usando `CTRL+C`) encerrará o cluster.
+Durante alguns minutos tudo será iniciado. Mantenha o terminal ficará aberto, exibindo os logs integrados dos três serviços. Finalizá-lo (por exemplo, usando `CTRL+C`) encerrará o cluster.
 
 Se for necessário inspecionar algum serviço, recupere o _id_ do _container_ usando `docker ps` e abra um terminal usando:
 
