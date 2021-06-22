@@ -11,6 +11,7 @@ Coletânea de materiais de estudo sobre Apache Kafka.
 - [Apache Kafka - CLI - Hands-on](artigos/apache-kafka-cli-hands-on.md)
 - [Dicas de Kafka no Windows com WSL2](artigos/dicas-de-kafka-no-windows-com-wsl2.md)
 - [Kafka com podman no Windows](artigos/kafka-com-podman-no-windows.md)
+- [Kafka Connect JDBC - ETL com MySQL e SQLServer](artigos/kafka-connect-jdbc-etl-com-mysql-e-sqlserver.md)
 
 ## Exemplos de código
 

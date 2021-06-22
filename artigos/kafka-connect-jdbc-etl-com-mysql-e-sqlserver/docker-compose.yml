@@ -1,0 +1,25 @@
+services:
+  kafka-cluster:
+    image: lensesio/fast-data-dev
+    environment:
+      ADV_HOST: 127.0.0.1
+    ports:
+      - 2181:2181 # Zookeeper
+      - 9092:9092 # Kafka Broker
+      - 8081-8083:8081-8083 # REST Proxy, Schema Registry, Kafka Connect
+      - 9581-9585:9581-9585 # JMX Ports
+      - 3030:3030 # UI, acessível externamente em http://127.0.0.1:3030/
+  mysql:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 3307:3306 # MySQL, exposto na porta 3307
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server
+    environment:
+      SA_PASSWORD: "My_secret_!2#4%"
+      ACCEPT_EULA: "Y"
+    ports:
+      - 1434:1433 # SQL Server, exposto na porta 1434
