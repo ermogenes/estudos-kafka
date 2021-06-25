@@ -26,6 +26,11 @@ Coletânea de materiais de estudo sobre Apache Kafka.
   - [Consumidor - Assign and Seek](https://github.com/ermogenes/kafka-consumer-java-hello-world-assign-seek)
   - [Consumidor com _commit_ manual de _offset_](https://github.com/ermogenes/kafka-consumer-java-hello-world-manual-commit)
 
+## Outros recursos
+
+- [Ambiente de testes com MySQL e SQL Server, contendo um banco de dados de uma organização fictícia](https://github.com/ermogenes/organizacao-db)
+
+
 ---
 
 Prof. Ermogenes Palacio, 2021-.
