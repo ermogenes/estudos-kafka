@@ -12,6 +12,7 @@ Coletânea de materiais de estudo sobre Apache Kafka.
 - [Dicas de Kafka no Windows com WSL2](artigos/dicas-de-kafka-no-windows-com-wsl2.md)
 - [Kafka com podman no Windows](artigos/kafka-com-podman-no-windows.md)
 - [Kafka Connect JDBC - ETL com MySQL e SQL Server](artigos/kafka-connect-jdbc-etl-com-mysql-e-sqlserver.md)
+- [Integração de bases de dados relacionais com Kafka Connect JDBC](artigos/integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc.md)
 
 ## Exemplos de código
 
@@ -29,7 +30,6 @@ Coletânea de materiais de estudo sobre Apache Kafka.
 ## Outros recursos
 
 - [Ambiente de testes com MySQL e SQL Server, contendo um banco de dados de uma organização fictícia](https://github.com/ermogenes/organizacao-db)
-
 
 ---
 
