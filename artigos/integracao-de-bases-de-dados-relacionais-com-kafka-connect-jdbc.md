@@ -357,16 +357,148 @@ Pontos de atenção:
 
 ### Modo composto data/hora e incremental
 
+Combina os filtros dos modos incremental e data/hora para detectar alterações e inserções, linha a linha.
+
+A cada intervalo de _polling_ uma _query_ `SELECT` é executada com a inclusão de condição `WHERE` pelo conector, de forma a obter somente os identificadores cujos valores são maiores do que o maior obtido anteriormente (uma inserção), ou cujos valores na coluna indicada sejam maiores do que o maior obtido anteriormente para o mesmo identificador (uma atualização). Ou seja, detecta qualquer alteração na tupla {[_coluna identificadora ascendente única_], [_coluna data/hora ascendente_]}. Todos os registros retornados são publicados no tópico.
+
+Exemplo:
+
+Considere os dados na tabela de origem:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+
+Considere um conector configurado para ler todas as colunas da tabela, e utilizar a coluna `id` como chave do tópico e coluna de detecção de incremento, e `atualizado_em` como a coluna de data/hora. Após a primeira consulta, o tópico conterá algo como:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+
+O tópico se manterá assim até que uma linha com `id > 3` ou com `atualizado_em > '2021-06-30 12:02:00.406'` seja encontrada.
+
+Algum tempo depois, a segunda linha é excluída, a terceira é alterada e é incluída uma quarta e uma quinta, deixando a tabela assim:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+Serão consumidas as linhas:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+Perceba que a exclusão não foi detectada. As linhas incluídas com são retornadas porque a coluna `id` recebeu valores maiores que o maior valor obtido anteriormente (mesmo sendo na linha com `id=4` a data de atualização inferior ao maior valor obtido anteriormente). A linha editada com `id=3` é retornada com os valores atualizados.
+
+E o tópico conterá algo do tipo:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+Em um destino que monitore o tópico, teremos:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+Perceba que ainda não são detectadas as exclusões, porém as alterações e inserções funcionam como esperado.
+
+A questão do `batch.max.rows` também é resolvida. Como a identificação de cada registro é feita pela combinação das duas colunas, o conector consegue detectar que a alteração foi a mais recente para aquele identificador específico, incluíndo o registro no tópico. Observe a diferença.
+
+Em seguida, foram adicionadas 150 linhas novas em lote, todas como mesmo valor na coluna `atualizado_em`. Uma nova linha ainda foi adicionada antes do próximo intervalo de _poll_ com `id=156`. A tabela conterá algo como:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | Sim | 2021-07-01 12:25:00.000
+106 | Jorge   | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+155 | Felícia | Sim | 2021-07-01 12:25:00.000
+156 | Genésio | Sim | 2021-07-01 12:27:35.373
+
+Serão consumidas as próximas 100 linhas:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | Sim | 2021-07-01 12:25:00.000
+
+No próximo _poll_ serão consumidas as linhas restantes:
+
+id | nome | ativo | atualizado_em
+106 | Jorge   | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+155 | Felícia | Sim | 2021-07-01 12:25:00.000
+156 | Genésio | Sim | 2021-07-01 12:27:35.373
+
+Teremos todos os registros no tópico, como esperado.
+
+Em seguida, as linhas com `id` nos valores `1` e `137` são alterados para:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Não | 2021-07-01 12:29:19.736
+... | ...     | ... | ...
+137 | Letícia | Não | 2021-07-01 12:29:19.938
+... | ...     | ... | ...
+
+Os registros são consumidos e no tópico teremos:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | Sim | 2021-07-01 12:25:00.000
+106 | Jorge   | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+155 | Felícia | Sim | 2021-07-01 12:25:00.000
+156 | Genésio | Sim | 2021-07-01 12:27:35.373
+1 | Maria   | Não | 2021-07-01 12:29:19.736
+137 | Letícia | Não | 2021-07-01 12:29:19.938
+
+Todas as alterações cujos identificadores sejam novos, ou cujas datas de atualização sejam superiores às anteriormente lidas para aquele registro são consumidas. Exclusões não, porém.
+
+Pontos de atenção:
+
+- Esse é o modo mais seguro.
+- Assume que a tabela de origem possui uma coluna com um número inteiro que seja um identificador único ascendente e também uma coluna contendo data/hora da última atualização, ascendente porém não necessariamente única.
+- Identifica unicamente a última versão de uma linha pela tupla formada pelas colunas citadas acima.
+- Não identifica alterações que não alterem a data de atualização, ou que a altere para valores não maiores do que o anteriormente obtido para essa linha. Isso exige que esta coluna seja garantidamente mantida coesa (monotonicamente crescente) e com a maior precisão possível.
+- Por não gerar leituras idempotentes, exige que o destino consiga tratar entradas duplicadas. Isso restringe o uso de colunas auto-incrementais e _constraints_ (incluíndo chaves-primárias) na tabela de destino envolvendo as colunas da tupla identificadora.
+- As colunas da tupla identificadora devem constituir um índice na origem, por questões de desempenho.
+- Para implementar a detecção de exclusões, use exclusão lógica (como na coluna `ativo` dos exemplos). Nesse caso, a exclusão física não acontece, somente uma atualização.
+
+## Modos de gravação do JDBC Sink
+
 _... em breve ..._
-<!-- 
-
-- Incremental + Data de atualização
-	A tabela de origem possui uma coluna com um número inteiro que seja um identificador único ascendente E uma coluna contendo data/hora da última atualização, ascendente porém não necessariamente único
-	Uma alteração é identificada pela tupla (id + data atualização)
-	Não identifica alterações que não alterem a data de atualização
-	--- o destino não pode ter identity (fks? constraints?)
-	--- a data de atualização deve ser atualizada sempre, com a maior precisão possível
-	--- exclusão somente lógica, já que não é levada para o tópico pelo source
-
-Garantir a criação de índices pelas colunas nas tabelas originais
- -->
