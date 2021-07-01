@@ -111,16 +111,93 @@ Pontos de atenção:
 
 ## Modo incremental
 
+Traz somente registros novos, baseados em um identificador único, numérico e estritamente crescente.
+
+A cada intervalo de _polling_ uma _query_ `SELECT` é executada com a inclusão de condição `WHERE` pelo conector, de forma a obter somente os identificadores cujos valores são maiores do que o maior obtido anteriormente. Todos os registros retornados são publicados no tópico.
+
+Exemplo:
+
+Exemplo:
+
+Considere os dados na tabela de origem:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+
+Considere um conector configurado para ler todas as colunas da tabela, e utilizar a coluna `id` como chave do tópico. Após a primeira consulta, o tópico conterá algo como:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+
+O tópico se manterá assim até que uma linha com `id > 3` seja incluída.
+
+Alguns intervalos depois, uma nova linha é inserida:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+
+O tópico consome somente a linha nova:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+
+O tópico terá algo como:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+
+Dias depois, a segunda linha é excluída, a terceira é alterada e é incluída uma quinta, deixando a tabela assim:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+3 | Estela  | Não | 2021-07-01 00:00:00.00
+4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.00
+
+Será consumida somente a linha nova:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+5 | Tereza  | Sim | 2021-07-01 00:00:00.00
+
+E o tópico conterá algo do tipo:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.00
+
+Os mesmos dados acima estarão em um destino que monitore o tópico.
+
+Perceba que atualizações e exclusões não são capturadas nesse modo. Cada linha é lida somente uma vez, e seu estado no tópico é imutável.
+
+Pontos de atenção:
+
+- Esse é o modo de menor _footprint_. Exige a menor quantidade possível de processamento, memória e banda.
+- A coluna identificadora deverá sempre ser indexada e única. De maneira geral, as chaves-primárias são as mais adequadas, pois não exigem o uso de índices adicionais.
+- Use somente em situações onde a tabela de origem contém dados imutáveis e perenes, como em uma tabela de fatos.
+
 _... em breve ..._
 <!-- 
-
-- Incremental
-	A tabela de origem possui uma coluna com um número inteiro que seja um identificador único ascendente
-	Recebe somente linhas com identificador maior do que na última consulta
-	Para dados imutáveis
-		Tabela de fatos
-	Detecta somente novas linhas
-	Não detecta alterações nas linhas existentes
 
 - Data de atualização
 	A tabela de origem possui uma coluna contendo data/hora da última atualização, ascendente porém não necessariamente único
