@@ -74,7 +74,7 @@ id | nome | ativo | atualizado_em
 --- | --- | --- | ---
 1 | Maria   | Sim | 2020-12-01 16:22:15.170
 2 | Antônio | Não | 2021-06-30 12:10:06.965
-4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
 
 Na próxima consulta o tópico conterá:
 
@@ -88,7 +88,7 @@ id | nome | ativo | atualizado_em
 3 | Estela  | Sim | 2021-06-30 12:02:00.406
 1 | Maria   | Sim | 2020-12-01 16:22:15.170
 2 | Antônio | Não | 2021-06-30 12:10:06.965
-4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
 
 Perceba que o valor de `atualizado_em` foi gravado com valor anterior aos demais, sem prejuízo da consulta.
 
@@ -99,13 +99,14 @@ id | nome | ativo | atualizado_em
 1 | Maria   | Sim | 2020-12-01 16:22:15.170
 2 | Antônio | Não | 2021-06-30 12:10:06.965
 3 | Estela  | Sim | 2021-06-30 12:02:00.406
-4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
 
 Perceba que a exclusão física do registro de `id=3` continuará existindo. A exclusão lógica do registro de `id=2`, porém, funcionou como esperado.
 
 Pontos de atenção:
 
 - Esse é o modo que exige maior consumo de recursos de banda e memória. 
+- Por não gerar leituras idempotentes, exige que o destino consiga tratar entradas duplicadas.
 - O ajuste fino envolvendo intervalo de _polling_, tempo de retenção do tópico e otimização da _query_ é essencial.
 - Use somente quando as tabelas forem muito pequenas, forem limpas frequentemente, ou como _fallback_ caso não possuam chave numérica estritamente crescente e/ou campo de data de atualização.
 
@@ -125,7 +126,7 @@ id | nome | ativo | atualizado_em
 2 | Antônio | Sim | 2010-02-14 04:35:04.041
 3 | Estela  | Sim | 2021-06-30 12:02:00.406
 
-Considere um conector configurado para ler todas as colunas da tabela, e utilizar a coluna `id` como chave do tópico. Após a primeira consulta, o tópico conterá algo como:
+Considere um conector configurado para ler todas as colunas da tabela, e utilizar a coluna `id` como chave do tópico e coluna de detecção de incremento. Após a primeira consulta, o tópico conterá algo como:
 
 id | nome | ativo | atualizado_em
 --- | --- | --- | ---
@@ -133,7 +134,7 @@ id | nome | ativo | atualizado_em
 2 | Antônio | Sim | 2010-02-14 04:35:04.041
 3 | Estela  | Sim | 2021-06-30 12:02:00.406
 
-O tópico se manterá assim até que uma linha com `id > 3` seja incluída.
+O tópico se manterá assim até que uma linha com `id > 3` seja encontrada.
 
 Alguns intervalos depois, uma nova linha é inserida:
 
@@ -142,7 +143,7 @@ id | nome | ativo | atualizado_em
 1 | Maria   | Sim | 2020-12-01 16:22:15.170
 2 | Antônio | Sim | 2010-02-14 04:35:04.041
 3 | Estela  | Sim | 2021-06-30 12:02:00.406
-4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
 
 O tópico consome somente a linha nova:
 
@@ -157,22 +158,22 @@ id | nome | ativo | atualizado_em
 1 | Maria   | Sim | 2020-12-01 16:22:15.170
 2 | Antônio | Sim | 2010-02-14 04:35:04.041
 3 | Estela  | Sim | 2021-06-30 12:02:00.406
-4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
 
 Dias depois, a segunda linha é excluída, a terceira é alterada e é incluída uma quinta, deixando a tabela assim:
 
 id | nome | ativo | atualizado_em
 --- | --- | --- | ---
 1 | Maria   | Sim | 2020-12-01 16:22:15.170
-3 | Estela  | Não | 2021-07-01 00:00:00.00
-4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
-5 | Tereza  | Sim | 2021-07-01 00:00:00.00
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
 
 Será consumida somente a linha nova:
 
 id | nome | ativo | atualizado_em
 --- | --- | --- | ---
-5 | Tereza  | Sim | 2021-07-01 00:00:00.00
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
 
 E o tópico conterá algo do tipo:
 
@@ -181,8 +182,8 @@ id | nome | ativo | atualizado_em
 1 | Maria   | Sim | 2020-12-01 16:22:15.170
 2 | Antônio | Sim | 2010-02-14 04:35:04.041
 3 | Estela  | Sim | 2021-06-30 12:02:00.406
-4 | Joaquim  | Sim | 2018-06-30 12:10:07.152
-5 | Tereza  | Sim | 2021-07-01 00:00:00.00
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
 
 Os mesmos dados acima estarão em um destino que monitore o tópico.
 
@@ -191,16 +192,143 @@ Perceba que atualizações e exclusões não são capturadas nesse modo. Cada li
 Pontos de atenção:
 
 - Esse é o modo de menor _footprint_. Exige a menor quantidade possível de processamento, memória e banda.
+- Por gerar leituras idempotentes, não exige que o destino consiga tratar entradas duplicadas.
 - A coluna identificadora deverá sempre ser indexada e única. De maneira geral, as chaves-primárias são as mais adequadas, pois não exigem o uso de índices adicionais.
 - Use somente em situações onde a tabela de origem contém dados imutáveis e perenes, como em uma tabela de fatos.
 
+## Modo data/hora
+
+Traz somente registros em que uma coluna de data/hora seja estritamente maior do que o maior valor obtido anteriormente.
+
+A cada intervalo de _polling_ uma _query_ `SELECT` é executada com a inclusão de condição `WHERE` pelo conector, de forma a obter somente os registros cujos valores na coluna indicada sejam maiores do que o maior obtido anteriormente. Todos os registros retornados são publicados no tópico.
+
+Exemplo:
+
+Considere os dados na tabela de origem:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+
+Considere um conector configurado para ler todas as colunas da tabela, e utilizar a coluna `id` como chave do tópico, e `atualizado_em` como a coluna de data/hora. Após a primeira consulta, o tópico conterá algo como:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+
+O tópico se manterá assim até que uma linha com `atualizado_em > '2021-06-30 12:02:00.406'` seja encontrada.
+
+Algum tempo depois, a segunda linha é excluída, a terceira é alterada e é incluída uma quarta e uma quinta, deixando a tabela assim:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+Serão consumidas as linhas:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+Perceba que a exclusão não foi detectada. A linha incluída com `id=4` não é retornada porque a coluna `atualizado_em` recebeu um valor menor ou igual ao maior valor obtido anteriormente. A linha editada com `id=3` é retornada com os valores atualizados, assim com a linha com com `id=5`, mesmo ambas tendo o mesmo valor de `atualizado_em`.
+
+E o tópico conterá algo do tipo:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+Em um destino que monitore o tópico, teremos:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+
+A configuração `batch.max.rows` (padrão `100`) permite indicar quanto registro serão lidos a cada consulta efetuada na origem. Isso gera efeitos colaterais indesejados nesse modo. Observe.
+
+Em seguida, foram adicionadas 150 linhas novas em lote, todas como mesmo valor na coluna `atualizado_em`. Uma nova linha ainda foi adicionada antes do próximo intervalo de _poll_ com `id=156`. A tabela conterá algo como:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+4 | Joaquim | Sim | 2018-06-30 12:10:07.152
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | ... | 2021-07-01 12:25:00.000
+106 | Jorge   | ... | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+155 | Felícia | ... | 2021-07-01 12:25:00.000
+156 | Genésio | ... | 2021-07-01 12:27:35.373
+
+Serão consumidas as próximas 100 linhas:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | ... | 2021-07-01 12:25:00.000
+
+O tópico terá:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | ... | 2021-07-01 12:25:00.000
+
+No próximo _poll_, serão consumidas somente linhas com `atualizado_em > '2021-07-01 12:25:00.000'`:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+156 | Genésio | ... | 2021-07-01 12:27:35.373
+
+No tópico teremos:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | ... | 2021-07-01 12:25:00.000
+156 | Genésio | ... | 2021-07-01 12:27:35.373
+
+Perceba que as linhas com `id` entre `106` e `155` (inclusive) nunca serão consumidas.
+
+Pontos de atenção:
+
+- Esse é o modo que necessita de maior atenção para ser utilizado. Use com muita cautela. Se possível, não utilize.
+- Por não gerar leituras idempotentes, exige que o destino consiga tratar entradas duplicadas.
+- A coluna de data/hora deve ser indexada na origem, apesar de não necessitar ser necessariamente única.
+- Use somente quando sua coluna de data/hora contiver a data de atualização do registro, e haja garantia de que não serão gravados valores diferentes (anteriores ou posteriores) do _timestamp_ do momento da gravação (como por exemplo, data/hora obtidos na aplicação e não no SGBD em sistemas multiprodutores de registros). Ainda assim use somente se não for possível utilizar o modo composto data/hora e incremental.
+
 _... em breve ..._
 <!-- 
-
-- Data de atualização
-	A tabela de origem possui uma coluna contendo data/hora da última atualização, ascendente porém não necessariamente único
-	Detecta somente linhas com data posterior à ultima consulta
-	Pode perder registros! Não recomendado.
 
 - Incremental + Data de atualização
 	A tabela de origem possui uma coluna com um número inteiro que seja um identificador único ascendente E uma coluna contendo data/hora da última atualização, ascendente porém não necessariamente único
