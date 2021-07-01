@@ -110,7 +110,7 @@ Pontos de atenção:
 - O ajuste fino envolvendo intervalo de _polling_, tempo de retenção do tópico e otimização da _query_ é essencial.
 - Use somente quando as tabelas forem muito pequenas, forem limpas frequentemente, ou como _fallback_ caso não possuam chave numérica estritamente crescente e/ou campo de data de atualização.
 
-## Modo incremental
+### Modo incremental
 
 Traz somente registros novos, baseados em um identificador único, numérico e estritamente crescente.
 
@@ -196,7 +196,7 @@ Pontos de atenção:
 - A coluna identificadora deverá sempre ser indexada e única. De maneira geral, as chaves-primárias são as mais adequadas, pois não exigem o uso de índices adicionais.
 - Use somente em situações onde a tabela de origem contém dados imutáveis e perenes, como em uma tabela de fatos.
 
-## Modo data/hora
+### Modo data/hora
 
 Traz somente registros em que uma coluna de data/hora seja estritamente maior do que o maior valor obtido anteriormente.
 
@@ -352,7 +352,10 @@ Pontos de atenção:
 - Esse é o modo que necessita de maior atenção para ser utilizado. Use com muita cautela. Se possível, não utilize.
 - Por não gerar leituras idempotentes, exige que o destino consiga tratar entradas duplicadas.
 - A coluna de data/hora deve ser indexada na origem, apesar de não necessitar ser necessariamente única.
+- Não identifica alterações que não modifiquem o valor da coluna de data/hora.
 - Use somente quando sua coluna de data/hora contiver a data de atualização do registro, e haja garantia de que não serão gravados valores diferentes (anteriores ou posteriores) do _timestamp_ do momento da gravação (como por exemplo, data/hora obtidos na aplicação e não no SGBD em sistemas multiprodutores de registros). Ainda assim use somente se não for possível utilizar o modo composto data/hora e incremental.
+
+### Modo composto data/hora e incremental
 
 _... em breve ..._
 <!-- 
