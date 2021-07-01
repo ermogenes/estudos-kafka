@@ -452,6 +452,7 @@ id | nome | ativo | atualizado_em
 No próximo _poll_ serão consumidas as linhas restantes:
 
 id | nome | ativo | atualizado_em
+--- | --- | --- | ---
 106 | Jorge   | Sim | 2021-07-01 12:25:00.000
 ... | ...     | ... | 2021-07-01 12:25:00.000
 155 | Felícia | Sim | 2021-07-01 12:25:00.000
