@@ -117,8 +117,6 @@ A cada intervalo de _polling_ uma _query_ `SELECT` é executada com a inclusão 
 
 Exemplo:
 
-Exemplo:
-
 Considere os dados na tabela de origem:
 
 id | nome | ativo | atualizado_em
