@@ -320,6 +320,33 @@ id | nome | ativo | atualizado_em
 
 Perceba que as linhas com `id` entre `106` e `155` (inclusive) nunca serão consumidas.
 
+Em seguida, as linhas com `id` nos valores `1` e `137` são alterados para:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Não | 2021-07-01 12:29:19.736
+... | ...     | ... | ...
+137 | Letícia | Não | 2021-07-01 12:29:19.938
+... | ...     | ... | ...
+
+Os registros são consumidos e no tópico teremos:
+
+id | nome | ativo | atualizado_em
+--- | --- | --- | ---
+1 | Maria   | Sim | 2020-12-01 16:22:15.170
+2 | Antônio | Sim | 2010-02-14 04:35:04.041
+3 | Estela  | Sim | 2021-06-30 12:02:00.406
+3 | Estela  | Não | 2021-07-01 00:00:00.000
+5 | Tereza  | Sim | 2021-07-01 00:00:00.000
+6 | Astolfo | Sim | 2021-07-01 12:25:00.000
+... | ...     | ... | 2021-07-01 12:25:00.000
+105 | Ana     | Sim | 2021-07-01 12:25:00.000
+156 | Genésio | Sim | 2021-07-01 12:27:35.373
+1 | Maria   | Não | 2021-07-01 12:29:19.736
+137 | Letícia | Não | 2021-07-01 12:29:19.938
+
+O registro que não havia sido consumido anteriormente agora será incluído, bem como alterações em registros existentes.
+
 Pontos de atenção:
 
 - Esse é o modo que necessita de maior atenção para ser utilizado. Use com muita cautela. Se possível, não utilize.
