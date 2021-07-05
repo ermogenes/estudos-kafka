@@ -496,10 +496,174 @@ Pontos de atenção:
 - Assume que a tabela de origem possui uma coluna com um número inteiro que seja um identificador único ascendente e também uma coluna contendo data/hora da última atualização, ascendente porém não necessariamente única.
 - Identifica unicamente a última versão de uma linha pela tupla formada pelas colunas citadas acima.
 - Não identifica alterações que não alterem a data de atualização, ou que a altere para valores não maiores do que o anteriormente obtido para essa linha. Isso exige que esta coluna seja garantidamente mantida coesa (monotonicamente crescente) e com a maior precisão possível.
-- Por não gerar leituras idempotentes, exige que o destino consiga tratar entradas duplicadas. Isso restringe o uso de colunas auto-incrementais e _constraints_ (incluíndo chaves-primárias) na tabela de destino envolvendo as colunas da tupla identificadora.
+- Por não gerar leituras idempotentes, exige que o destino consiga tratar entradas duplicadas. Isso restringe o uso de colunas auto-incrementais (inclusive nas chaves-primárias) e outras _constraints_ na tabela de destino envolvendo as colunas da tupla identificadora, e potencialmente em relações com outras tabelas.
 - As colunas da tupla identificadora devem constituir um índice na origem, por questões de desempenho.
 - Para implementar a detecção de exclusões, use exclusão lógica (como na coluna `ativo` dos exemplos). Nesse caso, a exclusão física não acontece, somente uma atualização.
 
 ## Modos de gravação do JDBC Sink
 
-_... em breve ..._
+Ao consumir os dados de um tópico, o conector _sink_ vai tentar atualizar a tabela de destino.
+
+A primeira coisa a se configurar é a chave-primária. Isso vai indicar ao Kafka a semântica dos dados no tópico e na tabela de destino.
+
+- `pk.mode=record_key` indica que a chave-primária está na chave do tópico.
+- `pk.mode=record_value` indica que a chave-primária está no valor do tópico.
+- `pk.fields` indica quais são as colunas que compõem a chave-primária, na localização indicada em `pk.mode`.
+
+🐱‍👤 _Também é possível não indicar a chave-primária, ou deixar que o Kafka gere um identificador único. Ambas alternativas podem constituir casos de uso interessantes, mas não serão discutidas aqui._
+
+Identificando a semântica dos valores, o Kafka Connect pode gerar as _queries_ DML para equalizar as tabelas. Serão utilizados os mesmos nomes de colunas contidos no esquema dos dados.
+
+Devemos configurar o modo de gravação. O padrão é `insert.mode=insert`, onde todas as entradas lidas do tópico formarão uma _query_ de `INSERT`.
+
+Esse cenário é perfeito para tabelas e tópicos de fatos, onde somente teremos inclusões, porém é bastante limitada se desejarmos espelhar alterações de registros. Além disso, o ideal é conseguir garantir que sejam feitas gravações idempotentes, permitindo a recuperação em caso de falha do processo.
+
+Usando `insert.mode=upsert`, o Kafka Connect será capaz de gerar o comando adequado de acordo com a plataforma, para realizar a ação atomicamente. Por exemplo, em MySQL serão gerados `INSERT .. ON DUPLICATE KEY UPDATE ..` e em SQL Server `MERGE ..`.
+
+## Exclusões físicas e DDL
+
+Quando configurado para executar exclusões físicas, o conector de _sink_ deve receber um registro com o valor da chave desejada e com os valores dos campos nulos. Isso deve ser feito por outra ferramenta, já que o conector _source_ não tem essa capacidade.
+
+Há a possibilidade de se configurar a _task_ para gerar os comandos DDL implementando auto criação e auto evolução das tabelas. Isso exige permissão adequada no usuário de login do conector.
+
+## Exemplos de uso
+
+Será utilizado o banco de dados de exemplo [organizacao-db](https://github.com/ermogenes/organizacao-db), com os dados no MySQL sendo transportados para o SQL Server.
+
+Para baixar e subir o ambiente contendo Kafka Connect, MySQL e SQL Server, faça:
+
+```
+git clone https://github.com/ermogenes/organizacao-db.git
+cd organizacao-db
+docker compose --file dc-mysql-com-dados-kafka.yml up
+```
+
+Acesse o Kafka UI em [http://localhost:3030](http://localhost:3030) e crie as _tasks_.
+
+Todos os exemplos assumem exclusão lógica (exclusões físicas não são tratadas).
+
+### Modo data/hora e incremento
+
+Os dados da tabela `pessoa` serão sincronizados com _upserts_, baseados na chave-primária e na data de atualização.
+
+[_*Source*_](integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc/01-pessoa-source-mysql.properties)
+
+```ini
+name=source-mysql-orgdb-pessoa
+connector.class=io.confluent.connect.jdbc.JdbcSourceConnector
+connection.url=jdbc:mysql://mysql:3306/
+connection.user=root
+connection.password=root
+mode=timestamp+incrementing
+catalog.pattern=organizacao
+table.whitelist=pessoa
+incrementing.column.name=id
+timestamp.column.name=data_atualizacao
+topic.prefix=mysql-orgdb-
+transforms=createKey,extractInt
+transforms.createKey.type=org.apache.kafka.connect.transforms.ValueToKey
+transforms.createKey.fields=id
+transforms.extractInt.type=org.apache.kafka.connect.transforms.ExtractField$Key
+transforms.extractInt.field=id
+tasks.max=1
+```
+
+[_*Sink*_](integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc/02-pessoa-sink-sqlserver.properties)
+
+```ini
+name=sink-sqlserver-orgdb-pessoa
+connector.class=io.confluent.connect.jdbc.JdbcSinkConnector
+topics=mysql-orgdb-pessoa
+connection.url=jdbc:sqlserver://sqlserver:1433
+connection.user=sa
+connection.password=My_secret_!2#4%
+table.name.format=organizacao.dbo.pessoa
+insert.mode=upsert
+pk.mode=record_key
+pk.fields=id
+tasks.max=1
+```
+
+### Modo incremento
+
+Os dados da tabela `evento` serão sincronizados com _inserts_, baseados na chave-primária.
+
+[_*Source*_](integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc/03-evento-source-mysql.properties)
+
+```ini
+name=source-mysql-orgdb-evento
+connector.class=io.confluent.connect.jdbc.JdbcSourceConnector
+connection.url=jdbc:mysql://mysql:3306/
+connection.user=root
+connection.password=root
+mode=incrementing
+catalog.pattern=organizacao
+table.whitelist=evento
+incrementing.column.name=id
+topic.prefix=mysql-orgdb-
+transforms=createKey,extractInt
+transforms.createKey.type=org.apache.kafka.connect.transforms.ValueToKey
+transforms.createKey.fields=id
+transforms.extractInt.type=org.apache.kafka.connect.transforms.ExtractField$Key
+transforms.extractInt.field=id
+tasks.max=1
+```
+
+[_*Sink*_](integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc/04-evento-sink-sqlserver.properties)
+
+```ini
+name=sink-sqlserver-orgdb-evento
+connector.class=io.confluent.connect.jdbc.JdbcSinkConnector
+topics=mysql-orgdb-evento
+connection.url=jdbc:sqlserver://sqlserver:1433
+connection.user=sa
+connection.password=My_secret_!2#4%
+table.name.format=organizacao.dbo.evento
+insert.mode=insert
+pk.mode=record_key
+pk.fields=id
+tasks.max=1
+```
+
+### Modo em massa
+
+Os dados da tabela `papel` serão sincronizados em massa.
+
+[_*Source*_](integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc/05-papel-source-mysql.properties)
+
+```ini
+name=source-mysql-orgdb-papel
+connector.class=io.confluent.connect.jdbc.JdbcSourceConnector
+connection.url=jdbc:mysql://mysql:3306/
+connection.user=root
+connection.password=root
+mode=bulk
+poll.interval.ms=60000
+catalog.pattern=organizacao
+table.whitelist=papel
+topic.prefix=mysql-orgdb-
+transforms=createKey,extractInt
+transforms.createKey.type=org.apache.kafka.connect.transforms.ValueToKey
+transforms.createKey.fields=id
+transforms.extractInt.type=org.apache.kafka.connect.transforms.ExtractField$Key
+transforms.extractInt.field=id
+tasks.max=1
+```
+
+[_*Sink*_](integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc/06-papel-sink-sqlserver.properties)
+
+```ini
+name=sink-sqlserver-orgdb-papel
+connector.class=io.confluent.connect.jdbc.JdbcSinkConnector
+topics=mysql-orgdb-papel
+connection.url=jdbc:sqlserver://sqlserver:1433
+connection.user=sa
+connection.password=My_secret_!2#4%
+table.name.format=organizacao.dbo.papel
+insert.mode=upsert
+pk.mode=record_key
+pk.fields=id
+tasks.max=1
+```
+
+
