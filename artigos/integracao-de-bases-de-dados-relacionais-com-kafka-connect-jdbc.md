@@ -502,7 +502,7 @@ Pontos de atenção:
 
 ### _Queries_ para obtenção dos conjuntos de dados
 
-Podemos ajustar a obtenção de dados para além do apontamento de um objeto do banco, como uma tabela, por exemplo. Para isso, usamos a propriedade `query`. Ela deve conter a parte inicial de um _script_ no qual possa ser inserido pelo Kafka Connect uma cláusula `WHERE`.
+Podemos ajustar a obtenção de dados para além do apontamento de um objeto do banco, como uma tabela, por exemplo. Para isso, usamos a propriedade `query`. Ela deve conter a parte inicial de um _script_ no qual possa ser inserido pelo Kafka Connect uma cláusula `WHERE` e uma `ORDER BY`.
 
 Exemplo, considerando `mode=incrementing` e `incrementing.column.name=id`:
 
@@ -518,7 +518,8 @@ Após o filtro adicionado, a _query_ executada será algo como:
 SELECT *
 FROM pessoa T1
     INNER JOIN cargo T2 ON T1.cargo_id = T2.id
-WHERE id > ?
+WHERE "id" > ?
+ORDER BY "id" ASC
 ```
 
 Caso seja necessário incluir um filtro adicional, temos que realizá-lo em uma _subquery_:
