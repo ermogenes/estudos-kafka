@@ -506,7 +506,7 @@ Podemos ajustar a obtenção de dados para além do apontamento de um objeto do 
 
 Exemplo, considerando `mode=incrementing` e `incrementing.column.name=id`:
 
-```sql
+```tsql
 SELECT *
 FROM pessoa T1
     INNER JOIN cargo T2 ON T1.cargo_id = T2.id
@@ -514,7 +514,7 @@ FROM pessoa T1
 
 Após o filtro adicionado, a _query_ executada será algo como:
 
-```sql
+```tsql
 SELECT *
 FROM pessoa T1
     INNER JOIN cargo T2 ON T1.cargo_id = T2.id
@@ -523,7 +523,7 @@ WHERE id > ?
 
 Caso seja necessário incluir um filtro adicional, temos que realizá-lo em uma _subquery_:
 
-```sql
+```tsql
 SELECT * FROM (
     SELECT * FROM pessoa WHERE situacao = 1
 ) T1
@@ -531,7 +531,7 @@ SELECT * FROM (
 
 Uma solução possível para obtenção de dados via _stored procedures_ é utilizar uma tabela temporária:
 
-```sql
+```tsql
 CREATE TABLE #temp (id INT, nome VARCHAR(200));
 INSERT INTO #temp EXEC sp_sel_pessoa_por_situacao 0;
 SELECT * FROM #temp
