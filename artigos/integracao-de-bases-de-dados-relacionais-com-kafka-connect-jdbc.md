@@ -500,6 +500,47 @@ Pontos de atenção:
 - As colunas da tupla identificadora devem constituir um índice na origem, por questões de desempenho.
 - Para implementar a detecção de exclusões, use exclusão lógica (como na coluna `ativo` dos exemplos). Nesse caso, a exclusão física não acontece, somente uma atualização.
 
+### _Queries_ para obtenção dos conjuntos de dados
+
+Podemos ajustar a obtenção de dados para além do apontamento de um objeto do banco, como uma tabela, por exemplo. Para isso, usamos a propriedade `query`. Ela deve conter a parte inicial de um _script_ no qual possa ser inserido pelo Kafka Connect uma cláusula `WHERE`.
+
+Exemplo, considerando `mode=incrementing` e `incrementing.column.name=id`:
+
+```sql
+SELECT *
+FROM pessoa T1
+    INNER JOIN cargo T2 ON T1.cargo_id = T2.id
+```
+
+Após o filtro adicionado, a _query_ executada será algo como:
+
+```sql
+SELECT *
+FROM pessoa T1
+    INNER JOIN cargo T2 ON T1.cargo_id = T2.id
+WHERE id > ?
+```
+
+Caso seja necessário incluir um filtro adicional, temos que realizá-lo em uma _subquery_:
+
+```sql
+SELECT * FROM (
+    SELECT * FROM pessoa WHERE situacao = 1
+) T1
+```
+
+Uma solução possível para obtenção de dados via _stored procedures_ é utilizar uma tabela temporária:
+
+```sql
+CREATE TABLE #temp (id INT, nome VARCHAR(200));
+INSERT INTO #temp EXEC sp_sel_pessoa_por_situacao 0;
+SELECT * FROM #temp
+```
+
+Perceba que a _proc_ será executada completamente todas as vezes, e o filtro aplicado sobre o resultado incluído na tabela temporária. É necessária atenção redobrada ao utilizar essa estratégia em tabelas massivas. Considere o uso de _views_ otimizadas quando possível.
+
+Você ainda pode adicionar alguma cláusula ao final da query usando `query.suffix`.
+
 ## Modos de gravação do JDBC Sink
 
 Ao consumir os dados de um tópico, o conector _sink_ vai tentar atualizar a tabela de destino.
