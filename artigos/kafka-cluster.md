@@ -46,6 +46,8 @@ As portas `2181`, `2888` e `3888` devem estar disponíveis para todos no cluster
 
 É possível também expôr alguns _endpoints_ HTTP usando o recurso _AdminServer_, disponibilizando-os no _endpoint_ `/commands`.
 
+Uma ferramenta de gestão que pode ser utilizada é o [Netflix Exhibitor](https://github.com/soabase/exhibitor).
+
 ### Interagindo
 
 Iniciando em primeiro plano:
@@ -104,4 +106,21 @@ echo abcd | nc localhost 2181 ; echo
 Lista completa [aqui](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_zkCommands).
 
 Toda a interação com o ZooKeeper será feita pelo Kafka, sem que precisemos interagir diretamente, a não ser para depuração ou ajustes finos.
+
+### Armazenamento
+
+Todos os arquivos contidos em `dataDir` serão mantidos indefinidamente. Caso seja necessário fazer um expurgo, copie-os para outra instalação e faça experimentos, seguindo as recomendações da documentação oficial.
+
+Faça backups dessa pasta e também dos logs, em `logs/zookeeper.out`, encontrado no diretório de instalação do Kafka.
+
+### Desempenho
+
+Os principais fatores de desempenhos são:
+
+- Latência de rede: baixa latência é o principal fator de desempenho. Na nuvem, deixe cada servidor em uma zona de disponibilidade, mas todos na mesma região.
+- Velocidade de acesso a disco: segundo item mais impactante.
+- RAM _swap_: não use _swap_ em produção.
+- Dados e logs em discos separados: ajuda, mas não é essencial.
+- Número de servidores no cluster: adicionar muitos servidores (5+) sobrecarrega o cluster.
+- Isolamento: não execute outros processos junto com o ZooKeeper.
 
