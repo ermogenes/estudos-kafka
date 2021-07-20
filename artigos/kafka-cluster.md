@@ -29,19 +29,79 @@ Uma instância única de ZooKeeper pode ser utilizada para ambientes de desenvol
 
 ### Configuração
 
-Normalmente salva em um arquivo chamado `zookeeper.properties`:
+Normalmente salva em um arquivo chamado `zookeeper.properties`. Um arquivo comum contém algo como:
 
 ```ini
-tickTime=2000
-dataDir=/var/lib/zookeeper/
+dataDir=/data/zookeeper
 clientPort=2181
-initLimit=5
-syncLimit=2
-server.1=zoo1:2888:3888
-server.2=zoo2:2888:3888
-server.3=zoo3:2888:3888
+maxClientCnxns=0
+tickTime=2000
+initLimit=10
+syncLimit=5
 ```
+
+Veja todos os parâmetros [aqui](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_configuration).
 
 As portas `2181`, `2888` e `3888` devem estar disponíveis para todos no cluster, instâncias ZooKeeper e Kafka. A porta `2181` também pode ser aberta para outros possíveis clientes.
 
-Veja todos os parâmetros [aqui](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_configuration).
+É possível também expôr alguns _endpoints_ HTTP usando o recurso _AdminServer_, disponibilizando-os no _endpoint_ `/commands`.
+
+### Interagindo
+
+Iniciando em primeiro plano:
+```bash
+# bin/zookeeper-server-start.sh config/zookeeper.properties
+```
+
+Iniciando como _daemon_:
+```bash
+# bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
+```
+
+Verificando a execução:
+```bash
+nc -vz localhost 2181
+echo srvr | nc localhost 2181 ; echo
+```
+
+Abrindo o _shell_ (uma vez logado, use `help` para visualizar as opções):
+```bash
+bin/zookeeper-shell.sh localhost:2181
+```
+
+- `ls /` lista os nós da raiz (uma árvore, semelhante ao sistema de arquivos);
+- `create /xyz "abc"` cria o nó `/xyz` com os dados `abc`;
+- `get /xyz` retorna os dados do nó `/xyz`;
+- `get /xyz true` monitora os dados do nó `/xyz`, criando um _watcher_;
+- `set /xyz "pqr"` grava `pqr` no nó `/xyz`;
+- `rmr /xyz ` remove o nó `/xyz ` e todos os seus filhos, recursivamente. 
+
+Monitorando o log:
+```bash
+tail -F logs/zookeeper.out
+```
+
+#### 4LW ("_four letter words_")
+
+Você pode interagir com o cluster enviando comando de quatro letras para qualquer um dos nós.
+
+Exemplo usando o utilitário `nc` (substitua `abcd` por um dos comandos válidos):
+```bash
+echo abcd | nc localhost 2181 ; echo
+```
+
+- `conf` retorna detalhes da configuração;
+- `cons` retorna detalhes das sessões abertas;
+  - `crst` reseta as estatísticas das sessões abertas;
+- `dirs`  retorna o espaço total utilizado pelo ZooKeeper, em bytes;
+- `envi`  retorna detalhes do ambiente;
+- `ruok` retorna `imok` caso o servidor esteja rodando sem erros.
+- `srvr` retorna detalhes do servidor;
+- `stat` retorna estatísticas do servidor e dos clientes conectados;
+  - `srst` reseta as estatísticas do servidor;
+- `mntr` retorna variáveis para monitoramento e _health check_.
+
+Lista completa [aqui](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_zkCommands).
+
+Toda a interação com o ZooKeeper será feita pelo Kafka, sem que precisemos interagir diretamente, a não ser para depuração ou ajustes finos.
+
