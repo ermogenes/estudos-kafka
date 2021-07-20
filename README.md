@@ -11,6 +11,7 @@ Coletânea de materiais autorais de estudo sobre Apache Kafka.
 - [Kafka com podman no Windows](artigos/kafka-com-podman-no-windows.md)
 - [Kafka Connect JDBC - ETL com MySQL e SQL Server](artigos/kafka-connect-jdbc-etl-com-mysql-e-sqlserver.md)
 - [Integração de bases de dados relacionais com Kafka Connect JDBC](artigos/integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc.md)
+- [Kafka cluster](artigos/kafka-cluster.md)
 
 ## Exemplos de código
 
