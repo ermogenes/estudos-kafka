@@ -46,7 +46,11 @@ As portas `2181`, `2888` e `3888` devem estar disponíveis para todos no cluster
 
 É possível também expôr alguns _endpoints_ HTTP usando o recurso _AdminServer_, disponibilizando-os no _endpoint_ `/commands`.
 
-Uma ferramenta de gestão que pode ser utilizada é o [Netflix Exhibitor](https://github.com/soabase/exhibitor).
+Ferramentas de gestão:
+- [Netflix Exhibitor](https://github.com/soabase/exhibitor)
+- [ZooKeeper UI (web)](https://github.com/DeemOpen/zkui)
+- [ZooKeeper GUI (desktop)](https://github.com/echoma/zkui)
+- [ZooNavigator](https://github.com/elkozmon/zoonavigator)
 
 ### Interagindo
 

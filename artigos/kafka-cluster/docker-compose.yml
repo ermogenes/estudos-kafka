@@ -1,5 +1,6 @@
 services:
   zookeeper_1:
+    container_name: zookeeper_1
     build:
       context: .
       dockerfile: Dockerfile.zookeeper
@@ -12,6 +13,7 @@ services:
       - data_zookeeper_1:/data/zookeeper
       - kafka_logs_1:/kafka/logs
   zookeeper_2:
+    container_name: zookeeper_2
     build:
       context: .
       dockerfile: Dockerfile.zookeeper
@@ -24,6 +26,7 @@ services:
       - data_zookeeper_2:/data/zookeeper
       - kafka_logs_2:/kafka/logs
   zookeeper_3:
+    container_name: zookeeper_3
     build:
       context: .
       dockerfile: Dockerfile.zookeeper
@@ -35,6 +38,29 @@ services:
     volumes:
       - data_zookeeper_3:/data/zookeeper
       - kafka_logs_3:/kafka/logs
+  zoonavigator_web:
+    container_name: zoonavigator_web
+    image: elkozmon/zoonavigator-web:latest
+    environment:
+      API_HOST: zoonavigator_api
+      API_PORT: 9001
+      WEB_HTTP_PORT: 8001
+    ports:
+      - 8021:8001 # ZooNavigator UI http://localhost:8021/
+      # connection string: "zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181"
+    restart: always
+    depends_on:
+      - api
+  zoonavigator_api:
+    container_name: zoonavigator_api
+    image: elkozmon/zoonavigator-api:latest
+    environment:
+      API_HTTP_PORT: 9001
+    restart: always
+    depends_on:
+      - zookeeper_1
+      - zookeeper_2
+      - zookeeper_3
 volumes:
   data_zookeeper_1:
   data_zookeeper_2:
