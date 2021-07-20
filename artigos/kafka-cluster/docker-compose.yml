@@ -1,0 +1,12 @@
+services:
+  zookeeper_1:
+    build:
+      context: .
+      dockerfile: Dockerfile.zookeeper
+    ports:
+      - 2181:2181 # ZooKeeper
+      - 8010:80   # AdminServer http://localhost:8010/commands
+    volumes:
+      - data_zookeeper_1:/data/zookeeper
+volumes:
+  data_zookeeper_1:

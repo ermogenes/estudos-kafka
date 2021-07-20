@@ -1,0 +1,52 @@
+FROM ubuntu:20.04
+
+## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
+RUN apt-get update && apt-get install -y \
+        wget \
+        ca-certificates \
+        zip \
+        net-tools \
+        nano \
+        tar \
+        netcat \
+        openjdk-8-jdk
+
+## Para instalações on premise do ZooKeeper e Kafka,
+## ajuste o swap para ser acionado em cargas somente 99% ou maiores.
+## Não funciona no Docker.
+# RUN sysctl vm.swappiness=1
+# RUN echo "vm.swappiness=1" | tee --append /etc/sysctl.conf
+
+## Baixa e descompacta o Kafka para '/kafka'
+## Para selecionar outra versão, busque um mirror aqui:
+## https://kafka.apache.org/downloads
+WORKDIR /
+RUN wget https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz && \
+    tar -xvzf kafka_2.13-2.8.0.tgz && \
+    rm kafka_2.13-2.8.0.tgz && \
+    mv kafka_2.13-2.8.0 kafka
+
+WORKDIR /kafka
+
+## Copia o arquivo de configurações
+COPY zookeeper.properties config/zookeeper.properties
+
+## Inicia o ZooKeeper (como serviço) na porta 2181, admin na porta 8010
+COPY zookeeper.d /etc/init.d/zookeeper
+RUN chmod +x /etc/init.d/zookeeper
+RUN chown root:root /etc/init.d/zookeeper
+RUN update-rc.d zookeeper defaults
+EXPOSE 2181 8010
+
+## Para iniciar manualmente, use uma das opções abaixo:
+# CMD bin/zookeeper-server-start.sh config/zookeeper.properties
+# RUN bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
+
+## Para verificar a execução, faça:
+# nc -vz localhost 2181
+# echo srvr | nc localhost 2181 ; echo
+
+CMD echo "-- ZooKeeper --" && \
+    service zookeeper start && \
+    sleep 10s && \
+    tail -F /kafka/logs/zookeeper.out
