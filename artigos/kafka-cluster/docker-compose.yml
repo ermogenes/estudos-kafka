@@ -3,10 +3,36 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.zookeeper
+    environment:
+      ZOO_MY_ID: 1
     ports:
       - 2181:2181 # ZooKeeper
-      - 8010:80   # AdminServer http://localhost:8010/commands
+      - 8011:80   # AdminServer http://localhost:8011/commands
     volumes:
       - data_zookeeper_1:/data/zookeeper
+  zookeeper_2:
+    build:
+      context: .
+      dockerfile: Dockerfile.zookeeper
+    environment:
+      ZOO_MY_ID: 2
+    ports:
+      - 2182:2181 # ZooKeeper
+      - 8012:80   # AdminServer http://localhost:8012/commands
+    volumes:
+      - data_zookeeper_2:/data/zookeeper
+  zookeeper_3:
+    build:
+      context: .
+      dockerfile: Dockerfile.zookeeper
+    environment:
+      ZOO_MY_ID: 3
+    ports:
+      - 2183:2181 # ZooKeeper
+      - 8013:80   # AdminServer http://localhost:8013/commands
+    volumes:
+      - data_zookeeper_3:/data/zookeeper
 volumes:
   data_zookeeper_1:
+  data_zookeeper_2:
+  data_zookeeper_3:

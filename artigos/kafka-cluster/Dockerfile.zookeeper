@@ -47,6 +47,11 @@ EXPOSE 2181 8010
 # echo srvr | nc localhost 2181 ; echo
 
 CMD echo "-- ZooKeeper --" && \
+    echo $ZOO_MY_ID > /data/zookeeper/myid && \
     service zookeeper start && \
     sleep 10s && \
     tail -F /kafka/logs/zookeeper.out
+
+## A linha "echo $ZOO_MY_ID > /data/zookeeper/myid"
+## define o identificador do servidor no cluster
+## caso seja o único, pode retirar
