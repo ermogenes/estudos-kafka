@@ -10,6 +10,7 @@ services:
       - 8011:80   # AdminServer http://localhost:8011/commands
     volumes:
       - data_zookeeper_1:/data/zookeeper
+      - logs_zookeeper_1:/kafka/logs/zookeeper
   zookeeper_2:
     build:
       context: .
@@ -21,6 +22,7 @@ services:
       - 8012:80   # AdminServer http://localhost:8012/commands
     volumes:
       - data_zookeeper_2:/data/zookeeper
+      - logs_zookeeper_2:/kafka/logs/zookeeper
   zookeeper_3:
     build:
       context: .
@@ -32,7 +34,11 @@ services:
       - 8013:80   # AdminServer http://localhost:8013/commands
     volumes:
       - data_zookeeper_3:/data/zookeeper
+      - logs_zookeeper_3:/kafka/logs/zookeeper
 volumes:
   data_zookeeper_1:
   data_zookeeper_2:
   data_zookeeper_3:
+  logs_zookeeper_1:
+  logs_zookeeper_2:
+  logs_zookeeper_3:

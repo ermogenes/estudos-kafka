@@ -39,8 +39,8 @@ RUN update-rc.d zookeeper defaults
 EXPOSE 2181 8010
 
 ## Para iniciar manualmente, use uma das opções abaixo:
-# CMD bin/zookeeper-server-start.sh config/zookeeper.properties
-# RUN bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
+# bin/zookeeper-server-start.sh config/zookeeper.properties
+# bin/zookeeper-server-start.sh -daemon config/zookeeper.properties
 
 ## Para verificar a execução, faça:
 # nc -vz localhost 2181
