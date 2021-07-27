@@ -1,0 +1,43 @@
+FROM ubuntu:20.04
+
+ARG REGISTRY_HOST_NAME
+ARG BOOTSTRAP_SERVERS
+
+## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
+RUN apt-get update && apt-get install -y \
+        wget \
+        ca-certificates \
+        zip \
+        net-tools \
+        nano \
+        tar \
+        netcat \
+        openjdk-8-jdk
+
+## Baixa e descompacta o Confluent Community para '/confluent'
+
+WORKDIR /
+RUN wget http://packages.confluent.io/archive/6.2/confluent-community-6.2.0.tar.gz && \
+    tar -xvzf confluent-community-6.2.0.tar.gz && \
+    rm confluent-community-6.2.0.tar.gz && \
+    mv confluent-6.2.0 confluent
+
+WORKDIR /confluent
+
+## Copia o arquivo de configurações
+COPY schema-registry.properties etc/schema-registry/schema-registry.properties
+
+## Define o hostname divulgado pelo servidor
+RUN sed -i -r "s|#rhn|$REGISTRY_HOST_NAME|g" etc/schema-registry/schema-registry.properties
+## Define os endereços dos brokers
+RUN sed -i -r "s|#kbs|$BOOTSTRAP_SERVERS|g" etc/schema-registry/schema-registry.properties
+
+CMD echo "-- Schema Registry --" && \
+    sleep 60s && \
+    bin/schema-registry-start ./etc/schema-registry/schema-registry.properties
+
+## Teste verificando se foi criado o tópico '_schemas'
+## Pode-se testar criando um schema
+# curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+#   --data '{"schema": "{\"type\": \"string\"}"}' \
+#   http://localhost:8081/subjects/Kafka-key/versions

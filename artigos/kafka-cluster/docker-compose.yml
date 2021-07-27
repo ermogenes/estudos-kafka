@@ -38,6 +38,16 @@ services:
     volumes:
       - data_zookeeper_3:/data/zookeeper
       - kafka_logs-zookeeper_3:/kafka/logs
+  zoonavigator_api:
+    container_name: zoonavigator_api
+    image: elkozmon/zoonavigator-api:latest
+    environment:
+      API_HTTP_PORT: 9001
+    depends_on:
+      - zookeeper_1
+      - zookeeper_2
+      - zookeeper_3
+    restart: always
   zoonavigator_web:
     container_name: zoonavigator_web
     image: elkozmon/zoonavigator-web:latest
@@ -48,12 +58,8 @@ services:
     ports:
       - 8021:8001 # ZooNavigator UI http://localhost:8021/
       # connection string: "zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181"
-    restart: always
-  zoonavigator_api:
-    container_name: zoonavigator_api
-    image: elkozmon/zoonavigator-api:latest
-    environment:
-      API_HTTP_PORT: 9001
+    depends_on:
+      - zoonavigator_api
     restart: always
   broker_1:
     container_name: broker_1
@@ -68,6 +74,10 @@ services:
     volumes:
       - data_kafka_1:/data/kafka
       - kafka_logs-broker_1:/kafka/logs
+    depends_on:
+      - zookeeper_1
+      - zookeeper_2
+      - zookeeper_3
   broker_2:
     container_name: broker_2
     build:
@@ -81,6 +91,10 @@ services:
     volumes:
       - data_kafka_2:/data/kafka
       - kafka_logs-broker_2:/kafka/logs
+    depends_on:
+      - zookeeper_1
+      - zookeeper_2
+      - zookeeper_3
   broker_3:
     container_name: broker_3
     build:
@@ -94,6 +108,58 @@ services:
     volumes:
       - data_kafka_3:/data/kafka
       - kafka_logs-broker_3:/kafka/logs
+    depends_on:
+      - zookeeper_1
+      - zookeeper_2
+      - zookeeper_3
+  cmak:
+    container_name: cmak
+    image: vimagick/cmak
+    environment:
+      - ZK_HOSTS=zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181
+      - KAFKA_MANAGER_AUTH_ENABLED=true
+      - KAFKA_MANAGER_USERNAME=admin
+      - KAFKA_MANAGER_PASSWORD=admin
+    ports:
+      - 8022:9000 # http://localhost:8022/
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
+    healthcheck:
+      test: curl -f http://cmak:9000/api/health || exit 1
+    restart: unless-stopped
+  # kafka_topics_ui:
+  #   container_name: kafka_topics_ui
+  #   image: 
+  registry_1:
+    container_name: registry_1
+    build:
+      context: .
+      dockerfile: Dockerfile.schema-registry
+      args:
+        REGISTRY_HOST_NAME: registry_1
+        BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
+    environment:
+      LOG_DIR: /data/logs
+    ports:
+      - 8881:8081
+    volumes:
+      - data-logs_registry_1:/data/logs
+  registry_2:
+    container_name: registry_2
+    build:
+      context: .
+      dockerfile: Dockerfile.schema-registry
+      args:
+        REGISTRY_HOST_NAME: registry_2
+        BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092      
+    environment:
+      LOG_DIR: /data/logs
+    ports:
+      - 8882:8081
+    volumes:
+      - data-logs_registry_2:/data/logs
 volumes:
   data_zookeeper_1:
   data_zookeeper_2:
@@ -107,3 +173,5 @@ volumes:
   kafka_logs-broker_1:
   kafka_logs-broker_2:
   kafka_logs-broker_3:
+  data-logs_registry_1:
+  data-logs_registry_2:
