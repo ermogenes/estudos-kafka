@@ -13,7 +13,7 @@ Serviços providos:
 Para mais detalhes, consulte a [documentação oficial](https://zookeeper.apache.org/doc/current/zookeeperOver.html).
 
 Em um cluster Kafka, o ZooKeeper é mandatório. Algumas de suas responsabilidades são:
-- Armazenamento do _id_ do cluster, gerado na primeira inicialização;
+- Armazenamento do _id_ do quórum, gerado na primeira inicialização;
 - Registro e manutenção de lista dos _brokers_ disponíveis, utilizando chamadas de _heartbeat_;
 - Armazenamento externo das configurações dos tópicos (partições, fator de replicação, etc.) e suas réplicas (ISR);
 - Eleição de líder caso algum _broker_ se torne indisponível;
@@ -21,7 +21,7 @@ Em um cluster Kafka, o ZooKeeper é mandatório. Algumas de suas responsabilidad
 
 ### Quórum
 
-Dada a natureza da eleição ser a **maioria estrita**, devemos sempre utilizar `2n+1` servidores em nosso cluster (ou seja, números inteiros ímpares, como 1, 3, 5, ...). Nessa estrutura, `n` servidores indisponíveis são tolerados. Por exemplo, um cluster com 7 servidores (`n=3`) pode tolerar 3 servidores fora ao mesmo tempo. São necessário, portanto, 3 servidores para que se possa tolerar um servidor indisponível.
+Dada a natureza da eleição ser a **maioria estrita**, devemos sempre utilizar `2n+1` servidores em nosso quórum (ou seja, números inteiros ímpares, como 1, 3, 5, ...). Nessa estrutura, `n` servidores indisponíveis são tolerados. Por exemplo, um quórum com 7 servidores (`n=3`) pode tolerar 3 servidores fora ao mesmo tempo. São necessário, portanto, 3 servidores para que se possa tolerar um servidor indisponível.
 
 Uma instância única de ZooKeeper pode ser utilizada para ambientes de desenvolvimento, mas não garante nenhuma resiliência, além de não ser distribuído. Três instâncias devem ser suficientes para a maioria das instalações. Cinco instâncias exigem equipamentos e conexões de alto desempenho, maiores decisões estruturais, e são utilizados em grandes serviços como LinkedIn e Netflix. Um maior número de instâncias exigiria uma configuração com ajustes finos especializada.
 
@@ -89,7 +89,7 @@ tail -F logs/zookeeper.out
 
 #### 4LW ("_four letter words_")
 
-Você pode interagir com o cluster enviando comando de quatro letras para qualquer um dos nós.
+Você pode interagir com o quórum enviando comando de quatro letras para qualquer um dos nós.
 
 Exemplo usando o utilitário `nc` (substitua `abcd` por um dos comandos válidos):
 ```bash
@@ -125,6 +125,50 @@ Os principais fatores de desempenhos são:
 - Velocidade de acesso a disco: segundo item mais impactante.
 - RAM _swap_: não use _swap_ em produção.
 - Dados e logs em discos separados: ajuda, mas não é essencial.
-- Número de servidores no cluster: adicionar muitos servidores (5+) sobrecarrega o cluster.
+- Número de servidores: adicionar muitos servidores (5+) sobrecarrega o quórum.
 - Isolamento: não execute outros processos junto com o ZooKeeper.
 
+<!-- ## Apache Kafka
+
+https://docs.confluent.io/platform/current/kafka/deployment.html#running-ak-in-production
+
+brokers >1 ... 100s...
+repl fact == 3
+
+IO: leituras sequenciais
+
+broker.id - inteiro único por broker
+advertised.listeners - AULA SÓ DISSO
+delete.topic.enable - permitir exclusão de tópico
+log.dirs - lista separada por `,` com os diretórios para persistência dos logs (Kafka should have its own dedicated disk(s) or SSD(s))
+
+uma pasta para cada broker, XFS (recomendado) ou ext4
+pelo menos 100k arquivos abertos simultaneamente
+ex:
+```bash
+echo "* hard nofile 100000
+* soft nofile 100000" | tee --append /etc/security/limits.conf
+```
+
+valores padrão para novos tópicos:
+num.partitions
+default.replication.factor === 2 ou 3
+min.insync.replicas === 2
+
+log.retention.ms
+log.retention.minutes
+log.retention.hours ~1 semana
+log.segment.bytes ~1gb
+log.retention.check.interval.ms ~5min
+
+zookeeper.connect=[list of ZooKeeper servers]
+
+hostname1:port1,hostname2:port2,hostname3:port3/chroot/path
+
+ex. z1:2181,z2:2181,z3:2181/kafka
+/kafka é um chroot
+
+zookeeper.connection.timeout.ms ~6k
+
+auto.create.topics.enable
+ -->

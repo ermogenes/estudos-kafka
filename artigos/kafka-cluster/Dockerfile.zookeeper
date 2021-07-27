@@ -1,5 +1,8 @@
 FROM ubuntu:20.04
 
+ARG ZOO_MY_ID
+ENV ZOO_MY_ID $ZOO_MY_ID
+
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
 RUN apt-get update && apt-get install -y \
         wget \
@@ -49,7 +52,7 @@ EXPOSE 2181 8010
 CMD echo "-- ZooKeeper --" && \
     echo $ZOO_MY_ID > /data/zookeeper/myid && \
     service zookeeper start && \
-    sleep 10s && \
+    sleep 5s && \
     tail -F /kafka/logs/zookeeper.out
 
 ## A linha "echo $ZOO_MY_ID > /data/zookeeper/myid"

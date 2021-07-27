@@ -1,9 +1,9 @@
 #!/bin/sh
-# description: Standard script to start and stop zookeeper
+# Standard script to start and stop Kafka
 
 DAEMON_PATH=/kafka/bin
 CONFIG_PATH=/kafka/config
-DAEMON_NAME=zookeeper
+DAEMON_NAME=kafka
 
 PATH=$PATH:$DAEMON_PATH
 
@@ -11,18 +11,18 @@ PATH=$PATH:$DAEMON_PATH
 case "$1" in
   start)
         # Start daemon.
-        pid=`ps ax | grep -i 'org.apache.zookeeper' | grep -v grep | awk '{print $1}'`
+        pid=`ps ax | grep -i 'kafka.kafka' | grep -v grep | awk '{print $1}'`
         if [ -n "$pid" ]
           then
-            echo "Zookeeper is already running";
+            echo "Kafka is already running";
         else
           echo "Starting $DAEMON_NAME";
-          $DAEMON_PATH/zookeeper-server-start.sh -daemon $CONFIG_PATH/zookeeper.properties
+          $DAEMON_PATH/kafka-server-start.sh -daemon $CONFIG_PATH/server.properties
         fi
         ;;
   stop)
         echo "Shutting down $DAEMON_NAME";
-        $DAEMON_PATH/zookeeper-server-stop.sh
+        $DAEMON_PATH/kafka-server-stop.sh
         ;;
   restart)
         $0 stop
@@ -30,12 +30,12 @@ case "$1" in
         $0 start
         ;;
   status)
-        pid=`ps ax | grep -i 'org.apache.zookeeper' | grep -v grep | awk '{print $1}'`
+        pid=`ps ax | grep -i 'kafka.kafka' | grep -v grep | awk '{print $1}'`
         if [ -n "$pid" ]
           then
-          echo "Zookeeper is running as PID: $pid"
+          echo "Kafka is running as PID: $pid"
         else
-          echo "Zookeeper is not running"
+          echo "Kafka is not running"
         fi
         ;;
   *)

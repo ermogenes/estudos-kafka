@@ -4,40 +4,40 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.zookeeper
-    environment:
-      ZOO_MY_ID: 1
+      args:
+        ZOO_MY_ID: 1
     ports:
       - 2181:2181 # ZooKeeper
       - 8011:80   # AdminServer http://localhost:8011/commands
     volumes:
       - data_zookeeper_1:/data/zookeeper
-      - kafka_logs_1:/kafka/logs
+      - kafka_logs-zookeeper_1:/kafka/logs
   zookeeper_2:
     container_name: zookeeper_2
     build:
       context: .
       dockerfile: Dockerfile.zookeeper
-    environment:
-      ZOO_MY_ID: 2
+      args:
+        ZOO_MY_ID: 2
     ports:
       - 2182:2181 # ZooKeeper
       - 8012:80   # AdminServer http://localhost:8012/commands
     volumes:
       - data_zookeeper_2:/data/zookeeper
-      - kafka_logs_2:/kafka/logs
+      - kafka_logs-zookeeper_2:/kafka/logs
   zookeeper_3:
     container_name: zookeeper_3
     build:
       context: .
       dockerfile: Dockerfile.zookeeper
-    environment:
-      ZOO_MY_ID: 3
+      args:
+        ZOO_MY_ID: 3
     ports:
       - 2183:2181 # ZooKeeper
       - 8013:80   # AdminServer http://localhost:8013/commands
     volumes:
       - data_zookeeper_3:/data/zookeeper
-      - kafka_logs_3:/kafka/logs
+      - kafka_logs-zookeeper_3:/kafka/logs
   zoonavigator_web:
     container_name: zoonavigator_web
     image: elkozmon/zoonavigator-web:latest
@@ -49,22 +49,61 @@ services:
       - 8021:8001 # ZooNavigator UI http://localhost:8021/
       # connection string: "zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181"
     restart: always
-    depends_on:
-      - api
   zoonavigator_api:
     container_name: zoonavigator_api
     image: elkozmon/zoonavigator-api:latest
     environment:
       API_HTTP_PORT: 9001
     restart: always
-    depends_on:
-      - zookeeper_1
-      - zookeeper_2
-      - zookeeper_3
+  broker_1:
+    container_name: broker_1
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka
+      args:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ADVERTISED_HOST_NAME: broker_1
+    ports:
+      - 9992:9092 # Kafka broker
+    volumes:
+      - data_kafka_1:/data/kafka
+      - kafka_logs-broker_1:/kafka/logs
+  broker_2:
+    container_name: broker_2
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka
+      args:
+        KAFKA_BROKER_ID: 2
+        KAFKA_ADVERTISED_HOST_NAME: broker_2
+    ports:
+      - 9993:9092 # Kafka broker
+    volumes:
+      - data_kafka_2:/data/kafka
+      - kafka_logs-broker_2:/kafka/logs
+  broker_3:
+    container_name: broker_3
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka
+      args:
+        KAFKA_BROKER_ID: 3
+        KAFKA_ADVERTISED_HOST_NAME: broker_3
+    ports:
+      - 9994:9092 # Kafka broker
+    volumes:
+      - data_kafka_3:/data/kafka
+      - kafka_logs-broker_3:/kafka/logs
 volumes:
   data_zookeeper_1:
   data_zookeeper_2:
   data_zookeeper_3:
-  kafka_logs_1:
-  kafka_logs_2:
-  kafka_logs_3:
+  kafka_logs-zookeeper_1:
+  kafka_logs-zookeeper_2:
+  kafka_logs-zookeeper_3:
+  data_kafka_1:
+  data_kafka_2:
+  data_kafka_3:
+  kafka_logs-broker_1:
+  kafka_logs-broker_2:
+  kafka_logs-broker_3:
