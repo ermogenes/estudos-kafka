@@ -1,0 +1,57 @@
+FROM ubuntu:20.04
+
+ARG KAFKA_BROKER_ID
+ARG KAFKA_ADVERTISED_HOST_NAME
+
+## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
+RUN apt-get update && apt-get install -y \
+        wget \
+        ca-certificates \
+        zip \
+        net-tools \
+        nano \
+        tar \
+        netcat \
+        openjdk-8-jdk
+
+# Configura limite de arquivos abertos
+RUN echo "* hard nofile 100000 \n* soft nofile 100000" >> /etc/security/limits.conf
+
+## Baixa e descompacta o Kafka para '/kafka'
+## Para selecionar outra versão, busque um mirror aqui:
+## https://kafka.apache.org/downloads
+WORKDIR /
+RUN wget https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz && \
+    tar -xvzf kafka_2.13-2.8.0.tgz && \
+    rm kafka_2.13-2.8.0.tgz && \
+    mv kafka_2.13-2.8.0 kafka
+
+WORKDIR /kafka
+
+## Copia o arquivo de configurações
+COPY server.properties config/server.properties
+
+## Define o id do broker
+RUN sed -i -r "s|#bid|$KAFKA_BROKER_ID|g" config/server.properties
+## Define o advertised listeners host name do broker
+RUN sed -i -r "s|#alh|$KAFKA_ADVERTISED_HOST_NAME|g" config/server.properties
+
+## Inicia o Kafka (como serviço) na porta 9092
+COPY kafka.d /etc/init.d/kafka
+RUN chmod +x /etc/init.d/kafka
+RUN chown root:root /etc/init.d/kafka
+RUN update-rc.d kafka defaults
+EXPOSE 9092
+
+## Para iniciar manualmente, use uma das opções abaixo:
+# bin/kafka-server-start.sh config/server.properties
+# bin/kafka-server-start.sh -daemon config/server.properties
+
+## Para verificar a execução, faça:
+# nc -vz localhost 9092
+
+CMD echo "-- Kafka --" && \
+    sleep 15s && \
+    service kafka start && \
+    sleep 2s && \
+    tail -F /kafka/logs/server.log

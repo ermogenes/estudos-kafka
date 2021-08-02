@@ -1,0 +1,42 @@
+FROM ubuntu:20.04
+
+ARG REGISTRY_HOST_NAME
+ARG BOOTSTRAP_SERVERS
+
+## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
+RUN apt-get update && apt-get install -y \
+        wget \
+        ca-certificates \
+        zip \
+        net-tools \
+        nano \
+        tar \
+        netcat \
+        openjdk-8-jdk
+
+## Baixa e descompacta o Confluent Community para '/confluent'
+
+WORKDIR /
+RUN wget http://packages.confluent.io/archive/6.2/confluent-community-6.2.0.tar.gz && \
+    tar -xvzf confluent-community-6.2.0.tar.gz && \
+    rm confluent-community-6.2.0.tar.gz && \
+    mv confluent-6.2.0 confluent
+
+WORKDIR /confluent
+
+## Copia o arquivo de configurações
+COPY kafka-rest.properties etc/kafka-rest/kafka-rest.properties
+
+## Define o o endereço do registry
+RUN sed -i -r "s|#sru|$REGISTRY_URL|g" etc/kafka-rest/kafka-rest.properties
+## Define os endereços dos brokers
+RUN sed -i -r "s|#kbs|$BOOTSTRAP_SERVERS|g" etc/kafka-rest/kafka-rest.properties
+## Define o id do proxy
+RUN sed -i -r "s|#rid|$REST_PROXY_ID|g" etc/kafka-rest/kafka-rest.properties
+
+CMD echo "-- REST Proxy --" && \
+    sleep 60s && \
+    bin/kafka-rest-start ./etc/kafka-rest/kafka-rest.properties
+
+## Para testar, liste os brokers no cluster
+# curl -X GET http://localhost:8082/brokers
