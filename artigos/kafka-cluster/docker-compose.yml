@@ -201,6 +201,41 @@ services:
       - 8888:8000
     volumes:
       - ./schema-registry.env.js:/schema-registry-ui/env.js
+  connect_1:
+    container_name: connect_1
+    build:
+      context: .
+      dockerfile: Dockerfile.connect
+      args:
+        CONNECT_ID: connect-cluster
+        CONNECT_ADVERTISED_HOST_NAME: connect_1
+        BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
+    ports:
+      - 8889:8084
+    volumes:
+      - kafka_logs-connect_1:/kafka/logs
+      - kafka_connectors-shared:/kafka/connectors
+  connect_2:
+    container_name: connect_2
+    build:
+      context: .
+      dockerfile: Dockerfile.connect
+      args:
+        CONNECT_ID: connect-cluster
+        CONNECT_ADVERTISED_HOST_NAME: connect_2
+        BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
+    ports:
+      - 8890:8084
+    volumes:
+      - kafka_logs-connect_2:/kafka/logs
+      - kafka_connectors-shared:/kafka/connectors
+  connect_ui:
+    container_name: connect_ui
+    image: landoop/kafka-connect-ui
+    environment:
+      - CONNECT_URL=http://connect_1:8084;connect-cluster-worker-1,http://connect_2:8084;connect-cluster-worker-2
+    ports:
+      - 8891:8000
 volumes:
   data_zookeeper_1:
   data_zookeeper_2:
@@ -218,3 +253,6 @@ volumes:
   data-logs_registry_2:
   data-logs_rest_proxy_1:
   data-logs_rest_proxy_2:
+  kafka_logs-connect_1:
+  kafka_logs-connect_2:
+  kafka_connectors-shared:

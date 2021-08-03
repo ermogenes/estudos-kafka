@@ -1,0 +1,42 @@
+FROM ubuntu:20.04
+
+ARG CONNECT_ID
+ENV CONNECT_ID $CONNECT_ID
+ARG CONNECT_ADVERTISED_HOST_NAME
+ARG BOOTSTRAP_SERVERS
+
+## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
+RUN apt-get update && apt-get install -y \
+        wget \
+        ca-certificates \
+        zip \
+        net-tools \
+        nano \
+        tar \
+        netcat \
+        openjdk-8-jdk
+
+## Baixa e descompacta o Kafka para '/kafka'
+## Para selecionar outra versão, busque um mirror aqui:
+## https://kafka.apache.org/downloads
+WORKDIR /
+RUN wget https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz && \
+    tar -xvzf kafka_2.13-2.8.0.tgz && \
+    rm kafka_2.13-2.8.0.tgz && \
+    mv kafka_2.13-2.8.0 kafka
+
+WORKDIR /kafka
+
+## Copia o arquivo de configurações
+COPY connect-distributed.properties config/connect-distributed.properties
+
+## Define o id do worker
+RUN sed -i -r "s|#cid|$CONNECT_ID|g" config/connect-distributed.properties
+## Define o advertised listeners host name do worker
+# RUN sed -i -r "s|#ahn|$CONNECT_ADVERTISED_HOST_NAME|g" config/connect-distributed.properties
+## Define os endereços dos brokers
+RUN sed -i -r "s|#bss|$BOOTSTRAP_SERVERS|g" config/connect-distributed.properties
+
+CMD echo "-- Kafka Connect worker on cluster [$CONNECT_ID]--" && \
+    sleep 120s && \
+    bin/connect-distributed.sh config/connect-distributed.properties

@@ -1,5 +1,7 @@
 FROM ubuntu:20.04
 
+ARG REST_PROXY_ID
+ENV REST_PROXY_ID $REST_PROXY_ID
 ARG REGISTRY_HOST_NAME
 ARG BOOTSTRAP_SERVERS
 
@@ -34,7 +36,7 @@ RUN sed -i -r "s|#kbs|$BOOTSTRAP_SERVERS|g" etc/kafka-rest/kafka-rest.properties
 ## Define o id do proxy
 RUN sed -i -r "s|#rid|$REST_PROXY_ID|g" etc/kafka-rest/kafka-rest.properties
 
-CMD echo "-- REST Proxy --" && \
+CMD echo "--------- REST Proxy [$REST_PROXY_ID] ---------" && \
     sleep 60s && \
     bin/kafka-rest-start ./etc/kafka-rest/kafka-rest.properties
 

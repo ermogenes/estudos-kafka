@@ -1,6 +1,7 @@
 FROM ubuntu:20.04
 
 ARG KAFKA_BROKER_ID
+ENV KAFKA_BROKER_ID $KAFKA_BROKER_ID
 ARG KAFKA_ADVERTISED_HOST_NAME
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
@@ -50,7 +51,7 @@ EXPOSE 9092
 ## Para verificar a execução, faça:
 # nc -vz localhost 9092
 
-CMD echo "-- Kafka --" && \
+CMD echo "--------- Kafka broker [$KAFKA_BROKER_ID] ---------" && \
     sleep 15s && \
     service kafka start && \
     sleep 2s && \

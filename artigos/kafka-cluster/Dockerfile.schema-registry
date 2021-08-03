@@ -1,6 +1,7 @@
 FROM ubuntu:20.04
 
 ARG REGISTRY_HOST_NAME
+ENV REGISTRY_HOST_NAME $REGISTRY_HOST_NAME
 ARG BOOTSTRAP_SERVERS
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
@@ -32,8 +33,8 @@ RUN sed -i -r "s|#rhn|$REGISTRY_HOST_NAME|g" etc/schema-registry/schema-registry
 ## Define os endereços dos brokers
 RUN sed -i -r "s|#kbs|$BOOTSTRAP_SERVERS|g" etc/schema-registry/schema-registry.properties
 
-CMD echo "-- Schema Registry --" && \
-    sleep 60s && \
+CMD echo "--------- Schema Registry [$REGISTRY_HOST_NAME] ---------" && \
+    sleep 90s && \
     bin/schema-registry-start ./etc/schema-registry/schema-registry.properties
 
 ## Teste verificando se foi criado o tópico '_schemas'

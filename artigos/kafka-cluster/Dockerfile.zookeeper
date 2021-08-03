@@ -49,7 +49,7 @@ EXPOSE 2181 8010
 # nc -vz localhost 2181
 # echo srvr | nc localhost 2181 ; echo
 
-CMD echo "-- ZooKeeper --" && \
+CMD echo "--------- ZooKeeper quórum node [$ZOO_MY_ID] ---------" && \
     echo $ZOO_MY_ID > /data/zookeeper/myid && \
     service zookeeper start && \
     sleep 5s && \
