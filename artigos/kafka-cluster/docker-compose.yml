@@ -7,6 +7,7 @@ services:
       args:
         ZOO_MY_ID: 1
         JMX_PORT: 9999
+        ZOOKEEPER_HOST_NAME: zookeeper_1
     ports:
       - 2181:2181 # ZooKeeper
       - 8011:80   # AdminServer http://localhost:8011/commands
@@ -22,6 +23,7 @@ services:
       args:
         ZOO_MY_ID: 2
         JMX_PORT: 9999
+        ZOOKEEPER_HOST_NAME: zookeeper_2
     ports:
       - 2182:2181 # ZooKeeper
       - 8012:80   # AdminServer http://localhost:8012/commands
@@ -37,6 +39,7 @@ services:
       args:
         ZOO_MY_ID: 3
         JMX_PORT: 9999
+        ZOOKEEPER_HOST_NAME: zookeeper_3
     ports:
       - 2183:2181 # ZooKeeper
       - 8013:80   # AdminServer http://localhost:8013/commands

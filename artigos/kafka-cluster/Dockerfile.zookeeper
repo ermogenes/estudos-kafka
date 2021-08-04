@@ -2,10 +2,10 @@ FROM ubuntu:20.04
 
 ARG ZOO_MY_ID
 ENV ZOO_MY_ID $ZOO_MY_ID
+ARG ZOOKEEPER_HOST_NAME
 ARG JMX_PORT
 ENV JMX_PORT $JMX_PORT
-ENV ZOOKEEPER_SERVER_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT}  -Djava.rmi.server.hostname=${KAFKA_ADVERTISED_HOST_NAME} -Djava.net.preferIPv4Stack=true"
-
+ENV ZOOKEEPER_SERVER_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} -Djava.rmi.server.hostname=${ZOOKEEPER_HOST_NAME} -Djava.net.preferIPv4Stack=true"
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
 RUN apt-get update && apt-get install -y \
@@ -39,11 +39,11 @@ WORKDIR /kafka
 COPY zookeeper.properties config/zookeeper.properties
 
 ## Inicia o ZooKeeper (como serviço) na porta 2181, admin na porta 8010
-COPY zookeeper.d /etc/init.d/zookeeper
-RUN chmod +x /etc/init.d/zookeeper
-RUN chown root:root /etc/init.d/zookeeper
-RUN update-rc.d zookeeper defaults
-EXPOSE 2181 8010
+# COPY zookeeper.d /etc/init.d/zookeeper
+# RUN chmod +x /etc/init.d/zookeeper
+# RUN chown root:root /etc/init.d/zookeeper
+# RUN update-rc.d zookeeper defaults
+# EXPOSE 2181 8010
 
 ## Para iniciar manualmente, use uma das opções abaixo:
 # bin/zookeeper-server-start.sh config/zookeeper.properties
@@ -53,12 +53,16 @@ EXPOSE 2181 8010
 # nc -vz localhost 2181
 # echo srvr | nc localhost 2181 ; echo
 
-CMD echo "--------- ZooKeeper quórum node [$ZOO_MY_ID] ---------" && \
-    echo $ZOO_MY_ID > /data/zookeeper/myid && \
-    service zookeeper start && \
-    sleep 5s && \
-    tail -F /kafka/logs/zookeeper.out
+# CMD echo "--------- ZooKeeper quórum node [$ZOO_MY_ID] ---------" && \
+#     echo $ZOO_MY_ID > /data/zookeeper/myid && \
+#     service zookeeper start && \
+#     sleep 5s && \
+#     tail -F /kafka/logs/zookeeper.out
 
 ## A linha "echo $ZOO_MY_ID > /data/zookeeper/myid"
 ## define o identificador do servidor no cluster
 ## caso seja o único, pode retirar
+
+CMD echo "--------- ZooKeeper quórum node id [$ZOO_MY_ID] ---------" && \
+    echo $ZOO_MY_ID > /data/zookeeper/myid && \
+    bin/zookeeper-server-start.sh config/zookeeper.properties
