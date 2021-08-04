@@ -3,6 +3,9 @@ FROM ubuntu:20.04
 ARG KAFKA_BROKER_ID
 ENV KAFKA_BROKER_ID $KAFKA_BROKER_ID
 ARG KAFKA_ADVERTISED_HOST_NAME
+ARG JMX_PORT
+ENV JMX_PORT $JMX_PORT
+ENV KAFKA_JMX_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} -Djava.rmi.server.hostname=${KAFKA_ADVERTISED_HOST_NAME} -Djava.net.preferIPv4Stack=true"
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
 RUN apt-get update && apt-get install -y \
@@ -38,11 +41,11 @@ RUN sed -i -r "s|#bid|$KAFKA_BROKER_ID|g" config/server.properties
 RUN sed -i -r "s|#alh|$KAFKA_ADVERTISED_HOST_NAME|g" config/server.properties
 
 ## Inicia o Kafka (como serviço) na porta 9092
-COPY kafka.d /etc/init.d/kafka
-RUN chmod +x /etc/init.d/kafka
-RUN chown root:root /etc/init.d/kafka
-RUN update-rc.d kafka defaults
-EXPOSE 9092
+# COPY kafka.d /etc/init.d/kafka
+# RUN chmod +x /etc/init.d/kafka
+# RUN chown root:root /etc/init.d/kafka
+# RUN update-rc.d kafka defaults
+# EXPOSE 9092
 
 ## Para iniciar manualmente, use uma das opções abaixo:
 # bin/kafka-server-start.sh config/server.properties
@@ -51,8 +54,12 @@ EXPOSE 9092
 ## Para verificar a execução, faça:
 # nc -vz localhost 9092
 
+# CMD echo "--------- Kafka broker [$KAFKA_BROKER_ID] ---------" && \
+#     sleep 15s && \
+#     service kafka start && \
+#     sleep 2s && \
+#     tail -F /kafka/logs/server.log
+
 CMD echo "--------- Kafka broker [$KAFKA_BROKER_ID] ---------" && \
-    sleep 15s && \
-    service kafka start && \
-    sleep 2s && \
-    tail -F /kafka/logs/server.log
+    sleep 10s && \
+    bin/kafka-server-start.sh config/server.properties

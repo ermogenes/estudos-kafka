@@ -4,6 +4,10 @@ ARG CONNECT_ID
 ENV CONNECT_ID $CONNECT_ID
 ARG CONNECT_ADVERTISED_HOST_NAME
 ARG BOOTSTRAP_SERVERS
+ARG JMX_PORT
+ENV JMX_PORT $JMX_PORT
+ENV KAFKA_JMX_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT}  -Djava.rmi.server.hostname=${KAFKA_ADVERTISED_HOST_NAME} -Djava.net.preferIPv4Stack=true"
+
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
 RUN apt-get update && apt-get install -y \
@@ -37,6 +41,6 @@ RUN sed -i -r "s|#cid|$CONNECT_ID|g" config/connect-distributed.properties
 ## Define os endereços dos brokers
 RUN sed -i -r "s|#bss|$BOOTSTRAP_SERVERS|g" config/connect-distributed.properties
 
-CMD echo "-- Kafka Connect worker on cluster [$CONNECT_ID]--" && \
+CMD echo "-- Kafka Connect worker on cluster [$CONNECT_ID] --" && \
     sleep 120s && \
     bin/connect-distributed.sh config/connect-distributed.properties

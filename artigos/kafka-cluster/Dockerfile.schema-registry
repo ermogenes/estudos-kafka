@@ -3,6 +3,9 @@ FROM ubuntu:20.04
 ARG REGISTRY_HOST_NAME
 ENV REGISTRY_HOST_NAME $REGISTRY_HOST_NAME
 ARG BOOTSTRAP_SERVERS
+ARG JMX_PORT
+ENV JMX_PORT $JMX_PORT
+ENV SCHEMA_REGISTRY_JMX_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT}  -Djava.rmi.server.hostname=${KAFKA_ADVERTISED_HOST_NAME} -Djava.net.preferIPv4Stack=true"
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
 RUN apt-get update && apt-get install -y \

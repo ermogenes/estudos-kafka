@@ -6,9 +6,11 @@ services:
       dockerfile: Dockerfile.zookeeper
       args:
         ZOO_MY_ID: 1
+        JMX_PORT: 9999
     ports:
       - 2181:2181 # ZooKeeper
       - 8011:80   # AdminServer http://localhost:8011/commands
+      - 9701:9999 # JMX
     volumes:
       - data_zookeeper_1:/data/zookeeper
       - kafka_logs-zookeeper_1:/kafka/logs
@@ -19,9 +21,11 @@ services:
       dockerfile: Dockerfile.zookeeper
       args:
         ZOO_MY_ID: 2
+        JMX_PORT: 9999
     ports:
       - 2182:2181 # ZooKeeper
       - 8012:80   # AdminServer http://localhost:8012/commands
+      - 9702:9999 # JMX
     volumes:
       - data_zookeeper_2:/data/zookeeper
       - kafka_logs-zookeeper_2:/kafka/logs
@@ -32,9 +36,11 @@ services:
       dockerfile: Dockerfile.zookeeper
       args:
         ZOO_MY_ID: 3
+        JMX_PORT: 9999
     ports:
       - 2183:2181 # ZooKeeper
       - 8013:80   # AdminServer http://localhost:8013/commands
+      - 9703:9999 # JMX
     volumes:
       - data_zookeeper_3:/data/zookeeper
       - kafka_logs-zookeeper_3:/kafka/logs
@@ -69,8 +75,10 @@ services:
       args:
         KAFKA_BROKER_ID: 1
         KAFKA_ADVERTISED_HOST_NAME: broker_1
+        JMX_PORT: 9999
     ports:
       - 9992:9092 # Kafka broker
+      - 9704:9999 # JMX
     volumes:
       - data_kafka_1:/data/kafka
       - kafka_logs-broker_1:/kafka/logs
@@ -86,8 +94,10 @@ services:
       args:
         KAFKA_BROKER_ID: 2
         KAFKA_ADVERTISED_HOST_NAME: broker_2
+        JMX_PORT: 9999
     ports:
       - 9993:9092 # Kafka broker
+      - 9705:9999 # JMX
     volumes:
       - data_kafka_2:/data/kafka
       - kafka_logs-broker_2:/kafka/logs
@@ -103,8 +113,10 @@ services:
       args:
         KAFKA_BROKER_ID: 3
         KAFKA_ADVERTISED_HOST_NAME: broker_3
+        JMX_PORT: 9999
     ports:
       - 9994:9092 # Kafka broker
+      - 9706:9999 # JMX
     volumes:
       - data_kafka_3:/data/kafka
       - kafka_logs-broker_3:/kafka/logs
@@ -117,9 +129,10 @@ services:
     image: vimagick/cmak
     environment:
       - ZK_HOSTS=zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181
-      - KAFKA_MANAGER_AUTH_ENABLED=true
-      - KAFKA_MANAGER_USERNAME=admin
-      - KAFKA_MANAGER_PASSWORD=admin
+      - KAFKA_MANAGER_AUTH_ENABLED=false
+      # - KAFKA_MANAGER_AUTH_ENABLED=true
+      # - KAFKA_MANAGER_USERNAME=admin
+      # - KAFKA_MANAGER_PASSWORD=admin
     ports:
       - 8822:9000 # http://localhost:8822/
     depends_on:
@@ -137,12 +150,18 @@ services:
       args:
         REGISTRY_HOST_NAME: registry_1
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
+        JMX_PORT: 9999
     environment:
       LOG_DIR: /data/logs
     ports:
       - 8881:8081
+      - 9707:9999 # JMX
     volumes:
       - data-logs_registry_1:/data/logs
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
   registry_2:
     container_name: registry_2
     build:
@@ -151,12 +170,18 @@ services:
       args:
         REGISTRY_HOST_NAME: registry_2
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092      
+        JMX_PORT: 9999
     environment:
       LOG_DIR: /data/logs
     ports:
       - 8882:8081
+      - 9708:9999 # JMX
     volumes:
       - data-logs_registry_2:/data/logs
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
   rest_proxy_1:
     container_name: rest_proxy_1
     build:
@@ -172,6 +197,10 @@ services:
       - 8885:8082
     volumes:
       - data-logs_rest_proxy_1:/data/logs
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
   rest_proxy_2:
     container_name: rest_proxy_2
     build:
@@ -187,6 +216,10 @@ services:
       - 8886:8082
     volumes:
       - data-logs_rest_proxy_2:/data/logs
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
   kafka-topics-ui:
     container_name: kafka-topics-ui
     image: landoop/kafka-topics-ui
@@ -194,6 +227,12 @@ services:
       - 8887:8000
     volumes:
       - ./kafka-topics-ui.env.js:/kafka-topics-ui/env.js
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
+      - rest_proxy_1
+      - rest_proxy_2
   schema-registry-ui:
     container_name: schema-registry-ui
     image: landoop/schema-registry-ui
@@ -201,6 +240,9 @@ services:
       - 8888:8000
     volumes:
       - ./schema-registry.env.js:/schema-registry-ui/env.js
+    depends_on:
+      - registry_1
+      - registry_2
   connect_1:
     container_name: connect_1
     build:
@@ -210,11 +252,17 @@ services:
         CONNECT_ID: connect-cluster
         CONNECT_ADVERTISED_HOST_NAME: connect_1
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
+        JMX_PORT: 9999
     ports:
       - 8889:8084
+      - 9709:9999 # JMX
     volumes:
       - kafka_logs-connect_1:/kafka/logs
       - kafka_connectors-shared:/kafka/connectors
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
   connect_2:
     container_name: connect_2
     build:
@@ -224,11 +272,17 @@ services:
         CONNECT_ID: connect-cluster
         CONNECT_ADVERTISED_HOST_NAME: connect_2
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
+        JMX_PORT: 9999
     ports:
       - 8890:8084
+      - 9710:9999 # JMX
     volumes:
       - kafka_logs-connect_2:/kafka/logs
       - kafka_connectors-shared:/kafka/connectors
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
   connect_ui:
     container_name: connect_ui
     image: landoop/kafka-connect-ui
@@ -236,6 +290,9 @@ services:
       - CONNECT_URL=http://connect_1:8084;connect-cluster-worker-1,http://connect_2:8084;connect-cluster-worker-2
     ports:
       - 8891:8000
+    depends_on:
+      - connect_1
+      - connect_2
 volumes:
   data_zookeeper_1:
   data_zookeeper_2:
