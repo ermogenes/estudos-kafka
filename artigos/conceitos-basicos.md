@@ -321,6 +321,128 @@ Em um grupo, uma partição sempre será lida pelo mesmo consumidor, garantindo 
 
 Caso hajam mais consumidores do que partições, eles ficarão inativos. Ainda assim podem ser úteis, pois serão acionados assim que um dos consumidores fique indisponível.
 
+## _Cluster_
+
+A seguir, algumas considerações informais sobre a estrutura de um _cluster_ de Kafka. Um bom ponto de referência é [esse artigo da Confluent](https://docs.confluent.io/platform/current/kafka/deployment.html#running-ak-in-production).
+
+[Requisitos mínimos](https://docs.confluent.io/platform/current/installation/system-requirements.html#system-requirements)
+
+### I/O
+
+Um servidor que rode Kafka deve ser otimizado para leituras sequenciais, preferencialmente em SSD dedicado. Há _cases_ com mais de 500 unidades em paralelo.
+
+As partições devem ser XFS (_fallback_ ext4).
+
+Podem ser indicadas diversas pastas de _log_ (em `log.dirs`, separados por `,`)
+
+Deve-se permitir pelo menos 100k arquivos abertos simultaneamente. São mantidos abertos 3 _file descriptors_ para cada tópico/partição/segmento no broker.
+
+Por exemplo:
+
+```bash
+echo "* hard nofile 100000 \n* soft nofile 100000" >> /etc/security/limits.conf
+```
+
+O desempenho é constante, independente do tamanho dos dados armazenados. Porém convém ajustar a expiração adequadamente.
+
+### Rede
+
+Otimizar para latência e banda.
+
+Manter os _brokers_ e o quórum do Zookeeper próximos. Evitar usar o mesmo rack em instalações _on premise_.
+
+### Memória
+
+Consumo separado em duas partes: Java HEAP do processo Kafka, e o restante disponível no sistema, a ser consumido com _page cache_ (_buffer_ de disco).
+
+Mínimo 8 GB, comumente 16 a 32 GB por _broker_:
+* Java HEAP para o processo KAFKA: 4GB+, quanto maior melhor;
+* o restante para o SO.
+
+Configurar o tamanho máximo do HEAP:
+
+```bash
+export KAFKA_HEAP_OPTS="-Xmx4G"
+```
+
+Não alterar o tamanho inicial (`-Xms`).
+
+Quanto mais partições em um _broker_, mais _heap_ é usado.
+
+#### Memória virtual
+
+Para instalações _on premise_ do ZooKeeper e do Kafka, ajuste o _swap_ para ser acionado em cargas somente 99% ou maiores. Não funciona no Docker.
+
+```bash
+sysctl vm.swappiness=1
+echo "vm.swappiness=1" | tee --append /etc/sysctl.conf
+```
+
+### CPU
+
+Normalmente não é gargalo.
+
+Pode exigir muito de CPU caso o SSL esteja habilitado.
+
+Possível ajuste fino e ponto de monitoramento é o Garbage Collector do Java.
+
+### Sistema operacional
+
+Linux. É isso. Use Linux.
+
+Não execute nenhum outro processo no mesmo ambiente, a não ser uma instância de Kafka ou uma de Zookeeper.
+
+Use a versão recomendada de Java e do Scala.
+
+Use ao menos 3 instâncias de Kafka (há casos de centenas) e 3 de Zookeeper (no máximo 5). Sério. Eu sei que você não vai fazer, mas não diga que eu não avisei.
+
+Em caso de instalação na AWS, há uma boa referência [aqui](https://www.confluent.io/blog/design-and-deployment-considerations-for-deploying-apache-kafka-on-aws/).
+
+## Configurações
+
+Algumas notas sobre configurações importantes.
+
+Identificação do _broker_:
+- `broker.id` - número inteiro único por _broker_.
+
+Configurações gerais:
+- `unclean.leader.election.enable` - mudar para `false` para evitar perda de dados.
+- `delete.topic.enable` - permissão para exclusão de tópico (recomendado `false`).
+- `auto.create.topics.enable` - permissão para criação automática de tópico. Deixe `false` ou mantenha configurações adequadas dos padrões para os tópicos criados:
+  - `num.partitions` - número de partições. Muito específico para cada tópico, de acordo com o número de _brokers_. Um número inicial bom pode ser algo entre `3` e `8`.
+  - `default.replication.factor` - fator de replicação padrão: `2` ou `3`.
+  - `min.insync.replicas` - número mínimo de réplicas sincronizadas: deixe sempre `2`.
+
+Desempenho:
+- `background.threads` - número de threads (`10` é um número viável). Ajuste caso tenha problemas com desempenho de CPU.
+- `num.io.threads` - número de threads de I/O (`8` é um número comum, aumente se tiver problema com rede).
+- `num.recovery.threads.per.data.dir` - ajuste para o número de discos montados que tiver (1 para cada disco montado).
+- `num.replicas.fetchers` - aumente caso tenha _lag_ em réplicas.
+- `zookeeper.session.timeout.ms` - use `6000`, aumente se tiver muitos _timeouts_ (e busque saber o porquê).
+- `log.flush.interval.messages` - nunca mexer.
+- `message.max.bytes` - não permita mensagens maiores do que 1MB em situações normais.
+
+Retenção: 
+- `log.retention.ms`, `log.retention.minutes` e `log.retention.hours` - caso não tenha ideia, use 1 semana.
+- `log.segment.bytes` - caso não tenha ideia, use 1 GB
+- `log.retention.check.interval.ms` - caso não tenha ideia, use 5 min.
+- `offsets.retention.minutes` - pode-se usar `1440` para 24h retendo os _offsets_, mas o ideal é aumentar para 1 mês ou até mais.
+
+Nuvem:
+- `broker.rack` - ajustar somente em caso de instalação na AWS.
+
+Rede:
+- `zookeeper.connect` - lista de nós Zookeeper
+  - Formato: `hostname1:port1,hostname2:port2,hostname3:port3/chroot/path`.
+  - Ex.: `z1:2181,z2:2181,z3:2181/kafka` (`/kafka` é um [chroot](https://wiki.gentoo.org/wiki/Chroot/pt-br))
+
+_Listeners_:
+- `advertised.listeners` é a principal configuração. Indica endereço pelo qual o cluster atenderá. Deve ser acessível pelo cliente.
+
+![](advertised-hostname.drawio.svg)
+
+Usar `localhost` nunca funciona fora da máquina local. Os nomes automáticos da rede do Docker Compose não são expostos, portanto só vai rodar de dentro. Pode-se ajustar no arquivo `hosts`.
+
 <!-- ## Ecossistema
 
 Kafka Connect API

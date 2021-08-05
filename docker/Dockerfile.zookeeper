@@ -2,10 +2,12 @@ FROM ubuntu:20.04
 
 ARG ZOO_MY_ID
 ENV ZOO_MY_ID $ZOO_MY_ID
-ARG ZOOKEEPER_HOST_NAME
+
+# JMX
 ARG JMX_PORT
 ENV JMX_PORT $JMX_PORT
-ENV ZOOKEEPER_SERVER_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} -Djava.rmi.server.hostname=${ZOOKEEPER_HOST_NAME} -Djava.net.preferIPv4Stack=true"
+ARG JMX_RMI_SERVER_HOST_NAME
+ENV ZOOKEEPER_SERVER_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} -Djava.rmi.server.hostname=${JMX_RMI_SERVER_HOST_NAME} -Djava.net.preferIPv4Stack=true"
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
 RUN apt-get update && apt-get install -y \

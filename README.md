@@ -4,16 +4,15 @@ Coletânea de materiais autorais de estudo sobre Apache Kafka.
 
 ## Artigos
 
-- [Conceitos básicos](artigos/conceitos-basicos.md)
-- [Introdução ao ecossistema](https://ermogenes.github.io/apache-kafka-introducao-ao-ecossistema/)
-- [Ambiente de desenvolvimento com Docker](artigos/ambiente-de-desenvolvimento-com-docker.md)
-- [Apache Kafka - CLI - Hands-on](artigos/apache-kafka-cli-hands-on.md)
-- [Dicas de Kafka no Windows com WSL2](artigos/dicas-de-kafka-no-windows-com-wsl2.md)
-- [Kafka com podman no Windows](artigos/kafka-com-podman-no-windows.md)
-- [Kafka Connect JDBC - ETL com MySQL e SQL Server](artigos/kafka-connect-jdbc-etl-com-mysql-e-sqlserver.md)
-- [Integração de bases de dados relacionais com Kafka Connect JDBC](artigos/integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc.md)
-- [Apache ZooKeeper](artigos/apache-zookeeper.md)
-<!-- - [Kafka cluster](artigos/kafka-cluster.md) -->
+- [📷 Introdução ao ecossistema](https://ermogenes.github.io/apache-kafka-introducao-ao-ecossistema/)
+- [📖 Conceitos básicos](artigos/conceitos-basicos.md)
+- [📖 Apache ZooKeeper](artigos/apache-zookeeper.md)
+- [📖 Ambiente de desenvolvimento com Docker](artigos/ambiente-de-desenvolvimento-com-docker.md)
+- [📖 Apache Kafka - CLI - Hands-on](artigos/apache-kafka-cli-hands-on.md)
+- [📖 Dicas de Kafka no Windows com WSL2](artigos/dicas-de-kafka-no-windows-com-wsl2.md)
+- [📖 Kafka com podman no Windows](artigos/kafka-com-podman-no-windows.md)
+- [📖 Kafka Connect JDBC - ETL com MySQL e SQL Server](artigos/kafka-connect-jdbc-etl-com-mysql-e-sqlserver.md)
+- [📖 Integração de bases de dados relacionais com Kafka Connect JDBC](artigos/integracao-de-bases-de-dados-relacionais-com-kafka-connect-jdbc.md)
 
 ## Exemplos de código
 

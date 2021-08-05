@@ -3,9 +3,12 @@ FROM ubuntu:20.04
 ARG KAFKA_BROKER_ID
 ENV KAFKA_BROKER_ID $KAFKA_BROKER_ID
 ARG KAFKA_ADVERTISED_HOST_NAME
+
+# JMX
 ARG JMX_PORT
 ENV JMX_PORT $JMX_PORT
-ENV KAFKA_JMX_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} -Djava.rmi.server.hostname=${KAFKA_ADVERTISED_HOST_NAME} -Djava.net.preferIPv4Stack=true"
+ARG JMX_RMI_SERVER_HOST_NAME
+ENV KAFKA_JMX_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} -Djava.rmi.server.hostname=${JMX_RMI_SERVER_HOST_NAME} -Djava.net.preferIPv4Stack=true"
 
 ## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
 RUN apt-get update && apt-get install -y \
@@ -20,6 +23,12 @@ RUN apt-get update && apt-get install -y \
 
 # Configura limite de arquivos abertos
 RUN echo "* hard nofile 100000 \n* soft nofile 100000" >> /etc/security/limits.conf
+
+## Para instalações on premise do ZooKeeper e Kafka,
+## ajuste o swap para ser acionado em cargas somente 99% ou maiores.
+## Não funciona no Docker.
+# RUN sysctl vm.swappiness=1
+# RUN echo "vm.swappiness=1" | tee --append /etc/sysctl.conf
 
 ## Baixa e descompacta o Kafka para '/kafka'
 ## Para selecionar outra versão, busque um mirror aqui:

@@ -7,7 +7,7 @@ services:
       args:
         ZOO_MY_ID: 1
         JMX_PORT: 9999
-        ZOOKEEPER_HOST_NAME: zookeeper_1
+        JMX_RMI_SERVER_HOST_NAME: zookeeper_1
     ports:
       - 2181:2181 # ZooKeeper
       - 8011:80   # AdminServer http://localhost:8011/commands
@@ -23,7 +23,7 @@ services:
       args:
         ZOO_MY_ID: 2
         JMX_PORT: 9999
-        ZOOKEEPER_HOST_NAME: zookeeper_2
+        JMX_RMI_SERVER_HOST_NAME: zookeeper_2
     ports:
       - 2182:2181 # ZooKeeper
       - 8012:80   # AdminServer http://localhost:8012/commands
@@ -39,7 +39,7 @@ services:
       args:
         ZOO_MY_ID: 3
         JMX_PORT: 9999
-        ZOOKEEPER_HOST_NAME: zookeeper_3
+        JMX_RMI_SERVER_HOST_NAME: zookeeper_3
     ports:
       - 2183:2181 # ZooKeeper
       - 8013:80   # AdminServer http://localhost:8013/commands
@@ -79,6 +79,7 @@ services:
         KAFKA_BROKER_ID: 1
         KAFKA_ADVERTISED_HOST_NAME: broker_1
         JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: broker_1
     ports:
       - 9992:9092 # Kafka broker
       - 9704:9999 # JMX
@@ -98,6 +99,7 @@ services:
         KAFKA_BROKER_ID: 2
         KAFKA_ADVERTISED_HOST_NAME: broker_2
         JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: broker_2
     ports:
       - 9993:9092 # Kafka broker
       - 9705:9999 # JMX
@@ -117,6 +119,7 @@ services:
         KAFKA_BROKER_ID: 3
         KAFKA_ADVERTISED_HOST_NAME: broker_3
         JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: broker_3
     ports:
       - 9994:9092 # Kafka broker
       - 9706:9999 # JMX
@@ -151,9 +154,9 @@ services:
       context: .
       dockerfile: Dockerfile.schema-registry
       args:
-        REGISTRY_HOST_NAME: registry_1
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
         JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: registry_1
     environment:
       LOG_DIR: /data/logs
     ports:
@@ -171,9 +174,9 @@ services:
       context: .
       dockerfile: Dockerfile.schema-registry
       args:
-        REGISTRY_HOST_NAME: registry_2
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092      
         JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: registry_2
     environment:
       LOG_DIR: /data/logs
     ports:
@@ -194,10 +197,13 @@ services:
         REST_PROXY_ID: 1
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
         REGISTRY_URL: http://registry_1:8081
+        JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: rest_proxy_1
     environment:
       LOG_DIR: /data/logs
     ports:
       - 8885:8082
+      - 9709:9999 # JMX
     volumes:
       - data-logs_rest_proxy_1:/data/logs
     depends_on:
@@ -213,10 +219,13 @@ services:
         REST_PROXY_ID: 2
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
         REGISTRY_URL: http://registry_2:8082
+        JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: rest_proxy_2
     environment:
       LOG_DIR: /data/logs
     ports:
       - 8886:8082
+      - 9710:9999 # JMX
     volumes:
       - data-logs_rest_proxy_2:/data/logs
     depends_on:
@@ -256,9 +265,10 @@ services:
         CONNECT_ADVERTISED_HOST_NAME: connect_1
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
         JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: connect_1
     ports:
       - 8889:8084
-      - 9709:9999 # JMX
+      - 9711:9999 # JMX
     volumes:
       - kafka_logs-connect_1:/kafka/logs
       - kafka_connectors-shared:/kafka/connectors
@@ -276,9 +286,10 @@ services:
         CONNECT_ADVERTISED_HOST_NAME: connect_2
         BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
         JMX_PORT: 9999
+        JMX_RMI_SERVER_HOST_NAME: connect_2
     ports:
       - 8890:8084
-      - 9710:9999 # JMX
+      - 9712:9999 # JMX
     volumes:
       - kafka_logs-connect_2:/kafka/logs
       - kafka_connectors-shared:/kafka/connectors
