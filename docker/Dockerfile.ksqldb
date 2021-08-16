@@ -1,0 +1,47 @@
+FROM ubuntu:20.04
+
+ARG KSQL_SERVER_ID
+ENV KSQL_SERVER_ID $KSQL_SERVER_ID
+ARG BOOTSTRAP_SERVERS
+
+# JMX
+ARG JMX_PORT
+ENV JMX_PORT $JMX_PORT
+ARG JMX_RMI_SERVER_HOST_NAME
+ENV KSQL_JMX_OPTS "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} -Djava.rmi.server.hostname=${JMX_RMI_SERVER_HOST_NAME} -Djava.net.preferIPv4Stack=true"
+# ENV KSQL_LOG4J_OPTS="-Dlog4j.configuration=file:etc/ksql-db/ksql-server.log4j.properties"
+
+## Atualiza o sistema, instala pacotes úteis, e o OpenJDK 8
+RUN apt-get update && apt-get install -y \
+        wget \
+        ca-certificates \
+        zip \
+        net-tools \
+        nano \
+        tar \
+        netcat \
+        openjdk-8-jdk
+
+## Baixa e descompacta o Confluent Community para '/confluent'
+
+WORKDIR /
+RUN wget http://packages.confluent.io/archive/6.2/confluent-community-6.2.0.tar.gz && \
+    tar -xvzf confluent-community-6.2.0.tar.gz && \
+    rm confluent-community-6.2.0.tar.gz && \
+    mv confluent-6.2.0 confluent
+
+WORKDIR /confluent
+
+## Copia o arquivo de configurações
+COPY ksql-server.properties etc/ksql-db/ksql-server.properties
+# COPY ksql-server.log4j.properties etc/ksql-db/ksql-server.log4j.properties
+
+## Define os endereços dos brokers
+RUN sed -i -r "s|#kbs|$BOOTSTRAP_SERVERS|g" etc/ksql-db/ksql-server.properties
+
+CMD echo "--------- ksqlDB Server [$KSQL_SERVER_ID] ---------" && \
+    sleep 60s && \
+    bin/ksql-server-start ./etc/ksql-db/ksql-server.properties
+
+## Para testar, liste o serviço
+# nc -vz localhost 8088

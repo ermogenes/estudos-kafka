@@ -307,6 +307,27 @@ services:
     depends_on:
       - connect_1
       - connect_2
+  ksqldb_1:
+    container_name: ksqldb_1
+    build:
+      context: .
+      dockerfile: Dockerfile.ksqldb
+      args:
+        KSQL_SERVER_ID: 1
+        BOOTSTRAP_SERVERS: PLAINTEXT://broker_1:9092,PLAINTEXT://broker_2:9092,PLAINTEXT://broker_3:9092
+        JMX_PORT: 19999
+        JMX_RMI_SERVER_HOST_NAME: ksqldb_1
+    environment:
+      LOG_DIR: /data/logs
+    ports:
+      - 8892:8088
+      - 9713:19999 # JMX
+    volumes:
+      - data-logs_ksqldb_1:/data/logs
+    depends_on:
+      - broker_1
+      - broker_2
+      - broker_3
 volumes:
   data_zookeeper_1:
   data_zookeeper_2:
@@ -327,3 +348,4 @@ volumes:
   kafka_logs-connect_1:
   kafka_logs-connect_2:
   kafka_connectors-shared:
+  data-logs_ksqldb_1:
