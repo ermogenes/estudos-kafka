@@ -1,0 +1,98 @@
+services:
+  worker1:
+    image: confluentinc/cp-kafka-connect:6.2.0
+    hostname: worker1
+    container_name: worker1
+    ports:
+      - 48083:8083
+    environment:
+      CONNECT_GROUP_ID: 1
+      CONNECT_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
+      CONNECT_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect-config
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: -1
+      CONNECT_CONFIG_STORAGE_MIN_INSYNC_REPLICAS: -1
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offset
+      CONNECT_OFFSET_STORAGE_PARTITIONS: -1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: -1
+      CONNECT_OFFSET_STORAGE_MIN_INSYNC_REPLICAS: -1
+      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      CONNECT_STATUS_STORAGE_PARTITIONS: -1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: -1
+      CONNECT_STATUS_STORAGE_MIN_INSYNC_REPLICAS: -1
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_INTERNAL_KEY_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_INTERNAL_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_REST_ADVERTISED_HOST_NAME: localhost # endereço visível pelos clientes
+      CONNECT_REST_PORT: 48083
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
+    volumes:
+      - ./connectors:/data/connect-jars
+    depends_on:
+      - broker01
+      - broker02
+      - broker03
+      - registry1
+      - registry2
+  worker2:
+    image: confluentinc/cp-kafka-connect:6.2.0
+    hostname: worker2
+    container_name: worker2
+    ports:
+      - 48183:8083
+    environment:
+      CONNECT_GROUP_ID: 2
+      CONNECT_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
+      CONNECT_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect-config
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: -1
+      CONNECT_CONFIG_STORAGE_MIN_INSYNC_REPLICAS: -1
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offset
+      CONNECT_OFFSET_STORAGE_PARTITIONS: -1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: -1
+      CONNECT_OFFSET_STORAGE_MIN_INSYNC_REPLICAS: -1
+      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      CONNECT_STATUS_STORAGE_PARTITIONS: -1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: -1
+      CONNECT_STATUS_STORAGE_MIN_INSYNC_REPLICAS: -1
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_INTERNAL_KEY_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_INTERNAL_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter      
+      CONNECT_REST_ADVERTISED_HOST_NAME: localhost # endereço visível pelos clientes
+      CONNECT_REST_PORT: 48183
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
+    volumes:
+      - ./connectors:/data/connect-jars
+    depends_on:
+      - broker01
+      - broker02
+      - broker03
+      - registry1
+      - registry2
+  connect-ui:
+    image: landoop/kafka-connect-ui:latest
+    hostname: connect-ui
+    container_name: connect-ui
+    ports:
+      - 48100:8000
+    environment:
+      CONNECT_URL: http://worker1:8083;worker-cluster-1,http://worker2:8083;worker-cluster-2
+      KAFKA_TOPICS_UI: "http://kafka-topics-ui.url"
+      KAFKA_TOPICS_UI_ENABLED: "true"
+    depends_on:
+      - connect1
+      - connect2

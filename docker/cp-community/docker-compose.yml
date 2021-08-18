@@ -102,7 +102,6 @@ services:
       KAFKA_LOG_SEGMENT_BYTES: 1073741824 # 1GB
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000 # 5 min
       KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 60000 # 1 min
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
     volumes:
       - broker01-data:/var/lib/kafka/data
@@ -128,7 +127,6 @@ services:
       KAFKA_LOG_SEGMENT_BYTES: 1073741824 # 1GB
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000 # 5 min
       KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 60000 # 1 min
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
     volumes:
       - broker02-data:/var/lib/kafka/data
@@ -154,7 +152,6 @@ services:
       KAFKA_LOG_SEGMENT_BYTES: 1073741824 # 1GB
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000 # 5 min
       KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 60000 # 1 min
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
     volumes:
       - broker03-data:/var/lib/kafka/data
@@ -166,11 +163,11 @@ services:
     container_name: cmak
     image: vimagick/cmak
     environment:
-      - ZK_HOSTS=zk1:2181,zk2:2181,zk3:2181
-      - KAFKA_MANAGER_AUTH_ENABLED=false
-      # - KAFKA_MANAGER_AUTH_ENABLED=true
-      # - KAFKA_MANAGER_USERNAME=admin
-      # - KAFKA_MANAGER_PASSWORD=admin
+      ZK_HOSTS: zk1:2181,zk2:2181,zk3:2181
+      KAFKA_MANAGER_AUTH_ENABLED: "false"
+      # KAFKA_MANAGER_AUTH_ENABLED: true
+      # KAFKA_MANAGER_USERNAME: admin
+      # KAFKA_MANAGER_PASSWORD: admin
     ports:
       - 49000:9000
     depends_on:
