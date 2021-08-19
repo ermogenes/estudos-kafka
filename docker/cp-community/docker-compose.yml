@@ -1,13 +1,33 @@
+networks:
+  default:
+    name: kafka-cluster
 volumes:
   zk1-data:
   zk1-logs:
+  zk1-secrets:
   zk2-data:
   zk2-logs:
+  zk2-secrets:
   zk3-data:
   zk3-logs:
+  zk3-secrets:
   broker01-data:
+  broker01-secrets:
   broker02-data:
+  broker02-secrets:
   broker03-data:
+  broker03-secrets:
+  registry1-secrets:
+  registry2-secrets:
+  connect01-data:
+  connect01-secrets:
+  # connect01-connectors:
+  connect01-kafka-secrets:
+  connect02-data:
+  connect02-secrets:
+  # connect02-connectors:
+  connect02-kafka-secrets:
+  ksqldb-extensions:
 services:
   zk1:
     image: confluentinc/cp-zookeeper:6.2.0
@@ -26,6 +46,8 @@ services:
     volumes:
       - zk1-data:/var/lib/zookeeper/data
       - zk1-logs:/var/lib/zookeeper/log
+      - zk1-secrets:/etc/zookeeper/secrets
+    restart: on-failure
   zk2:
     image: confluentinc/cp-zookeeper:6.2.0
     hostname: zk2
@@ -42,6 +64,8 @@ services:
     volumes:
       - zk2-data:/var/lib/zookeeper/data
       - zk2-logs:/var/lib/zookeeper/log
+      - zk2-secrets:/etc/zookeeper/secrets
+    restart: on-failure
   zk3:
     image: confluentinc/cp-zookeeper:6.2.0
     hostname: zk3
@@ -58,19 +82,23 @@ services:
     volumes:
       - zk3-data:/var/lib/zookeeper/data
       - zk3-logs:/var/lib/zookeeper/log
+      - zk3-secrets:/etc/zookeeper/secrets
+    restart: on-failure
   zoonavigator-api:
     image: elkozmon/zoonavigator-api:latest
     hostname: zoonavigator-api
     container_name: zoonavigator-api
-    # ports:
-    #   - 49001:9001
+    ports:
+      - 49001:9001
     environment:
       API_HTTP_PORT: 9001
     depends_on:
       - zk1
       - zk2
       - zk3
-    restart: always
+    restart: unless-stopped
+    profiles:
+      - ui
   zoonavigator-web:
     image: elkozmon/zoonavigator-web:latest
     hostname: zoonavigator-web
@@ -82,8 +110,10 @@ services:
       API_PORT: 9001
       WEB_HTTP_PORT: 8001
     depends_on:
-      - zoonavigator_api
-    restart: always
+      - zoonavigator-api
+    restart: unless-stopped
+    profiles:
+      - ui
   broker01:
     image: confluentinc/cp-kafka:6.2.0
     hostname: broker01
@@ -105,10 +135,12 @@ services:
       KAFKA_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
     volumes:
       - broker01-data:/var/lib/kafka/data
+      - broker01-secrets:/etc/kafka/secrets
     depends_on:
       - zk1
       - zk2
       - zk3
+    restart: on-failure
   broker02:
     image: confluentinc/cp-kafka:6.2.0
     hostname: broker02
@@ -130,10 +162,12 @@ services:
       KAFKA_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
     volumes:
       - broker02-data:/var/lib/kafka/data
+      - broker02-secrets:/etc/kafka/secrets
     depends_on:
       - zk1
       - zk2
       - zk3
+    restart: on-failure
   broker03:
     image: confluentinc/cp-kafka:6.2.0
     hostname: broker03
@@ -155,10 +189,12 @@ services:
       KAFKA_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
     volumes:
       - broker03-data:/var/lib/kafka/data
+      - broker03-secrets:/etc/kafka/secrets
     depends_on:
       - zk1
       - zk2
       - zk3
+    restart: on-failure
   cmak:
     container_name: cmak
     image: vimagick/cmak
@@ -169,7 +205,7 @@ services:
       # KAFKA_MANAGER_USERNAME: admin
       # KAFKA_MANAGER_PASSWORD: admin
     ports:
-      - 49000:9000
+      - 49000:9000 # Cluster Zookeeper Hosts: "zk1:2181,zk2:2181,zk3:2181/kafka"
     depends_on:
       - broker01
       - broker02
@@ -177,6 +213,8 @@ services:
     healthcheck:
       test: curl -f http://cmak:9000/api/health || exit 1
     restart: unless-stopped
+    profiles:
+      - ui
   registry1:
     image: confluentinc/cp-schema-registry:6.2.0
     hostname: registry1
@@ -184,11 +222,18 @@ services:
     ports:
       - 48081:8081
     environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://broker01:9092,PLAINTEXT://broker02:9092,PLAINTEXT://broker03:9092
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
       SCHEMA_REGISTRY_HOST_NAME: registry1
       SCHEMA_REGISTRY_LISTENERS: http://registry1:8081
       SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS: "GET,POST,PUT,OPTIONS"
       SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_ORIGIN: "*"
+    volumes:
+      - registry1-secrets:/etc/schema-registry/secrets
+    depends_on:
+      - broker01
+      - broker02
+      - broker03
+    restart: on-failure
   registry2:
     image: confluentinc/cp-schema-registry:6.2.0
     hostname: registry2
@@ -196,22 +241,33 @@ services:
     ports:
       - 48181:8081
     environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://broker01:9092,PLAINTEXT://broker02:9092,PLAINTEXT://broker03:9092
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
       SCHEMA_REGISTRY_HOST_NAME: registry2
       SCHEMA_REGISTRY_LISTENERS: http://registry2:8081
       SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS: "GET,POST,PUT,OPTIONS"
       SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_ORIGIN: "*"
+    volumes:
+      - registry2-secrets:/etc/schema-registry/secrets
+    depends_on:
+      - broker01
+      - broker02
+      - broker03
+    restart: on-failure
   registry-ui:
     image: landoop/schema-registry-ui:latest
     hostname: registry-ui
     container_name: registry-ui
+    environment:
+      SCHEMAREGISTRY_URL: http://registry1:8081 # ui supports just one registry
+      PROXY: "true"
     ports:
       - 48001:8000
-    volumes:
-      - ./registry-ui.env.js:/schema-registry-ui/env.js
     depends_on:
       - registry_1
       - registry_2
+    restart: unless-stopped
+    profiles:
+      - ui
   restproxy1:
     image: confluentinc/cp-kafka-rest:6.2.0
     hostname: restproxy1
@@ -220,7 +276,7 @@ services:
       - 48082:8082
     environment:
       KAFKA_REST_ID: 1
-      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://broker01:9092,PLAINTEXT://broker02:9092,PLAINTEXT://broker03:9092
+      KAFKA_REST_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
       KAFKA_REST_LISTENERS: http://0.0.0.0:8082
       KAFKA_REST_HOST_NAME: restproxy1
       KAFKA_REST_SCHEMA_REGISTRY_URL: http://registry1:8081
@@ -232,6 +288,7 @@ services:
       - broker02
       - broker03
       - registry1
+    restart: on-failure
   restproxy2:
     image: confluentinc/cp-kafka-rest:6.2.0
     hostname: restproxy2
@@ -240,7 +297,7 @@ services:
       - 48182:8082
     environment:
       KAFKA_REST_ID: 2
-      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://broker01:9092,PLAINTEXT://broker02:9092,PLAINTEXT://broker03:9092
+      KAFKA_REST_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
       KAFKA_REST_LISTENERS: http://0.0.0.0:8082
       KAFKA_REST_HOST_NAME: restproxy2
       KAFKA_REST_SCHEMA_REGISTRY_URL: http://registry2:8081
@@ -252,17 +309,221 @@ services:
       - broker02
       - broker03
       - registry2
+    restart: on-failure
   kafka-topics-ui:
     image: landoop/kafka-topics-ui:latest
     hostname: kafka-topics-ui
     container_name: kafka-topics-ui
+    environment:
+      KAFKA_REST_PROXY_URL: http://restproxy1:8082,http://restproxy2:8082
+      MAX_BYTES: 50000 # 50KB max fetch amount per topic
+      RECORD_POLL_TIMEOUT: 5000 # ms
+      DEBUG_LOGS_ENABLED: "true"
+      LAZY_LOAD_TOPIC_META: "false"
     ports:
       - 48000:8000
-    volumes:
-      - ./kafka-topics-ui.env.js:/kafka-topics-ui/env.js
     depends_on:
       - broker01
       - broker02
       - broker03
       - restproxy1
       - restproxy2
+    restart: unless-stopped
+    profiles:
+      - ui
+  ksqldb-server-primary:
+    image: confluentinc/cp-ksqldb-server:6.2.0
+    hostname: ksqldb-server-primary
+    container_name: ksqldb-server-primary
+    ports:
+      - 48088:8088
+      - 48283:8083
+    environment:
+      KSQL_KSQL_SERVICE_ID: service01
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
+      KSQL_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+      KSQL_CONFLUENT_SUPPORT_METRICS_ENABLE: "false"
+      KSQL_KSQL_HEARTBEAT_ENABLE: "true" # /clusterStatus
+      KSQL_KSQL_EXTENSION_DIR: /opt/confluent/ksql/extensions
+      KSQL_KSQL_CONNECT_URL: http://connect01:8083
+    volumes:
+      - ksqldb-extensions:/opt/confluent/ksql/extensions
+    depends_on:
+      - broker01
+      - broker02
+      - broker03
+      - registry1
+      - registry2
+      - connect01
+    restart: on-failure
+  ksqldb-server-additional1:
+    image: confluentinc/cp-ksqldb-server:6.2.0
+    hostname: ksqldb-server-additional1
+    container_name: ksqldb-server-additional1
+    ports:
+      - 48089:8089
+      - 48383:8083
+    environment:
+      KSQL_KSQL_SERVICE_ID: service01
+      KSQL_LISTENERS: http://0.0.0.0:8089
+      KSQL_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
+      KSQL_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      KSQL_CONFLUENT_SUPPORT_METRICS_ENABLE: "false"
+      KSQL_KSQL_HEARTBEAT_ENABLE: "true" # /clusterStatus
+      KSQL_KSQL_EXTENSION_DIR: /opt/confluent/ksql/extensions
+      KSQL_KSQL_CONNECT_URL: http://connect01:8083
+    volumes:
+      - ksqldb-extensions:/opt/confluent/ksql/extensions
+    depends_on:
+      - ksqldb-server-primary
+    restart: on-failure
+  ksqldb-cli:
+    image: confluentinc/cp-ksqldb-cli:6.2.0
+    hostname: ksqldb-cli
+    container_name: ksqldb-cli
+    # docker compose exec ksqldb-cli ksql http://ksqldb-server-primary:8088
+    depends_on:
+      - ksqldb-server-primary
+    entrypoint: /bin/sh
+    tty: true
+    restart: unless-stopped
+    profiles:
+      - ui
+  connect01:
+    image: confluentinc/cp-kafka-connect:6.2.0
+    hostname: connect01
+    container_name: connect01
+    ports:
+      - 48083:8083
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect01
+      CONNECT_GROUP_ID: connect-group
+      CONNECT_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect-config
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_CONFIG_STORAGE_MIN_INSYNC_REPLICAS: 2
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offset
+      CONNECT_OFFSET_STORAGE_PARTITIONS: 8
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_OFFSET_STORAGE_MIN_INSYNC_REPLICAS: 2
+      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      CONNECT_STATUS_STORAGE_PARTITIONS: 8
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_STATUS_STORAGE_MIN_INSYNC_REPLICAS: 2
+      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
+    volumes:
+      - connect01-data:/var/lib/kafka/data
+      - connect01-secrets:/etc/kafka/secrets
+      - connect01-kafka-secrets:/etc/kafka-connect/secrets
+    command:
+      - /bin/bash
+      - -c
+      - |
+        # Install components from Hub in /usr/share/confluent-hub-components
+        confluent-hub install --no-prompt castorm/kafka-connect-http:0.8.6
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.2.1
+        # confluent-hub install --no-prompt dariobalinzo/kafka-connect-elasticsearch-source:1.3
+        # confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:11.1.0
+        # confluent-hub install --no-prompt mongodb/kafka-connect-mongodb:1.6.1
+        confluent-hub install --no-prompt mdrogalis/voluble:0.3.1
+        confluent-hub install --no-prompt jcustenborder/kafka-connect-transform-common:0.1.0.54
+        /etc/confluent/docker/run &
+        sleep infinity
+    depends_on:
+      - broker01
+      - broker02
+      - broker03
+      - registry1
+      - registry2
+    restart: on-failure
+  connect02:
+    image: confluentinc/cp-kafka-connect:6.2.0
+    hostname: connect02
+    container_name: connect02
+    ports:
+      - 48183:8083
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: broker01:9092,broker02:9092,broker03:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect02
+      CONNECT_GROUP_ID: connect-group
+      CONNECT_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect-config
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_CONFIG_STORAGE_MIN_INSYNC_REPLICAS: 2
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offset
+      CONNECT_OFFSET_STORAGE_PARTITIONS: 8
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_OFFSET_STORAGE_MIN_INSYNC_REPLICAS: 2
+      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      CONNECT_STATUS_STORAGE_PARTITIONS: 8
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_STATUS_STORAGE_MIN_INSYNC_REPLICAS: 2
+      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://registry1:8081,http://registry2:8081
+      CONNECT_PLUGIN_PATH: /data/connect-jars
+    command:
+      - /bin/bash
+      - -c
+      - |
+        # Install components from Hub in /usr/share/confluent-hub-components
+        confluent-hub install --no-prompt castorm/kafka-connect-http:0.8.6
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.2.1
+        # confluent-hub install --no-prompt dariobalinzo/kafka-connect-elasticsearch-source:1.3
+        # confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:11.1.0
+        # confluent-hub install --no-prompt mongodb/kafka-connect-mongodb:1.6.1
+        confluent-hub install --no-prompt mdrogalis/voluble:0.3.1
+        confluent-hub install --no-prompt jcustenborder/kafka-connect-transform-common:0.1.0.54
+        /etc/confluent/docker/run &
+        sleep infinity
+    volumes:
+      - connect02-data:/var/lib/kafka/data
+      - connect02-secrets:/etc/kafka/secrets
+      - connect02-kafka-secrets:/etc/kafka-connect/secrets
+    command:
+      - /bin/bash
+      - -c
+      - |
+        # Install components from Hub in /usr/share/confluent-hub-components
+        confluent-hub install --no-prompt castorm/kafka-connect-http:0.8.6
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.2.1
+        # confluent-hub install --no-prompt dariobalinzo/kafka-connect-elasticsearch-source:1.3
+        # confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:11.1.0
+        # confluent-hub install --no-prompt mongodb/kafka-connect-mongodb:1.6.1
+        confluent-hub install --no-prompt mdrogalis/voluble:0.3.1
+        confluent-hub install --no-prompt jcustenborder/kafka-connect-transform-common:0.1.0.54
+        /etc/confluent/docker/run &
+        sleep infinity
+    depends_on:
+      - broker01
+      - broker02
+      - broker03
+      - registry1
+      - registry2
+    restart: on-failure
+  connect-ui:
+    image: landoop/kafka-connect-ui:latest
+    hostname: connect-ui
+    container_name: connect-ui
+    ports:
+      - 48100:8000
+    environment:
+      CONNECT_URL: http://connect01:8083;connect-group
+      KAFKA_TOPICS_UI: "http://localhost:4800"
+      KAFKA_TOPICS_UI_ENABLED: "true"
+    depends_on:
+      - connect01
+    restart: unless-stopped
+    profiles:
+      - ui
