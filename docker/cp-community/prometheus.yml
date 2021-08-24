@@ -1,0 +1,16 @@
+global:
+ scrape_interval: 60s
+ evaluation_interval: 60s
+scrape_configs:
+ - job_name: 'kafka-brokers'
+   static_configs:
+    - targets:
+      - broker01:8080
+      - broker02:8080
+      - broker03:8080
+ - job_name: 'zookeeper'
+   static_configs:
+    - targets:
+      - zk1:8080
+      - zk2:8080
+      - zk3:8080
