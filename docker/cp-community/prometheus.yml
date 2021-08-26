@@ -1,16 +1,40 @@
 global:
- scrape_interval: 60s
- evaluation_interval: 60s
+  scrape_interval: 20s
+  evaluation_interval: 20s
 scrape_configs:
- - job_name: 'kafka-brokers'
-   static_configs:
+  - job_name: 'prometheus'
+    static_configs:
     - targets:
-      - broker01:8080
-      - broker02:8080
-      - broker03:8080
- - job_name: 'zookeeper'
-   static_configs:
+      - prometheus:9090
+  - job_name: 'kafka'
+    static_configs:
     - targets:
-      - zk1:8080
-      - zk2:8080
-      - zk3:8080
+      - broker01:41234
+      - broker02:41234
+      - broker03:41234
+  - job_name: 'zookeeper'
+    static_configs:
+    - targets:
+      - zk1:41234
+      - zk2:41234
+      - zk3:41234
+  - job_name: 'registry'
+    static_configs:
+    - targets:
+      - registry1:41234
+      - registry2:41234
+  - job_name: 'restproxy'
+    static_configs:
+    - targets:
+      - restproxy1:41234
+      - restproxy2:41234
+  - job_name: 'ksqldb'
+    static_configs:
+    - targets:
+      - ksqldb-server-primary:41234
+      - ksqldb-server-additional1:41234
+  - job_name: 'connect'
+    static_configs:
+    - targets:
+      - connect01:41234
+      - connect02:41234
