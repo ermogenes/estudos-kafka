@@ -28,9 +28,14 @@ Em Java:
 - [Consumidor - _Assign and Seek_](https://github.com/ermogenes/kafka-consumer-java-hello-world-assign-seek)
 - [Consumidor com _commit_ manual de _offset_](https://github.com/ermogenes/kafka-consumer-java-hello-world-manual-commit)
 
+Em .NET:
+
+- [Prova de conceito com ksqlDB e Apache Nifi](https://github.com/ermogenes/PoCEventos)
+
 ## Outros recursos
 
 - [Ambiente de testes com MySQL e SQL Server, contendo um banco de dados de uma organização fictícia](https://github.com/ermogenes/organizacao-db)
+- [Instalação do Docker CE no WSL](https://gist.github.com/ermogenes/c712c964ed6de4e06444bceb78c4d30b)
 
 ---
 
